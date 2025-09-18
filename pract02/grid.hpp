@@ -38,5 +38,7 @@ class Grid {
 
   void draw(sf::RenderWindow &window);
   void draw_path(sf::RenderWindow& window);
+
+  int manhattan_distance(int row1, int col1, int row2, int col2);
 };
 #endif // !GRID_HPP
