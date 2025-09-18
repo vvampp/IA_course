@@ -1,9 +1,10 @@
 #include "grid.hpp"
-#include <iostream>
+
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/RectangleShape.hpp>
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/System/Vector2.hpp>
+#include <iostream>
 #include <random>
 #include <tuple>
 #include <utility>
@@ -15,35 +16,39 @@ Grid::Grid() {
   highlighted_cell = std::make_pair(-1, -1);
 }
 
-void Grid::set_wall(int x1, int y1, int x2, int y2) {
-  if (x1 == x2 and y1 == y2 + 1) {  // c1 is to the right of c2
-    cells[y1][x1].add_left_wall();
-    cells[y2][x2].add_right_wall();
-  } else if (x1 == x2 and y1 == y2 - 1) {  // c1 is to the left of c2
-    cells[y1][x1].add_right_wall();
-    cells[y2][x2].add_left_wall();
-  } else if (x1 == x2 + 1 and y1 == y2) {  // c1 is below c2
-    cells[y1][x1].add_top_wall();
-    cells[y2][x2].add_bottom_wall();
-  } else if (x1 == x2 - 1 and y1 == y2) {  // c1 is above c2
-    cells[y1][x1].add_bottom_wall();
-    cells[y2][x2].add_top_wall();
+void Grid::set_wall(int row1, int col1, int row2, int col2) {
+  if (row1 == row2 and col1 == col2 + 1) {  // c1 is to the right of c2
+    cells[col1][row1].add_left_wall();
+    cells[col2][row2].add_right_wall();
+  } else if (row1 == row2 and col1 == col2 - 1) {  // c1 is to the left of c2
+    cells[col1][row1].add_right_wall();
+    cells[col2][row2].add_left_wall();
+  } else if (row1 == row2 + 1 and col1 == col2) {  // c1 is below c2
+    cells[col1][row1].add_top_wall();
+    cells[col2][row2].add_bottom_wall();
+  } else if (row1 == row2 - 1 and col1 == col2) {  // c1 is above c2
+    cells[col1][row1].add_bottom_wall();
+    cells[col2][row2].add_top_wall();
   }
 }
 
-void Grid::remove_wall(int x1, int y1, int x2, int y2) {
-  if (x1 == x2 and y1 == y2 + 1) {  // c1 is to the right of c2
-    cells[y1][x1].remove_left_wall();
-    cells[y2][x2].remove_right_wall();
-  } else if (x1 == x2 and y1 == y2 - 1) {  // c1 is to the left of c2
-    cells[y1][x1].remove_right_wall();
-    cells[y2][x2].remove_left_wall();
-  } else if (x1 == x2 + 1 and y1 == y2) {  // c1 is below c2
-    cells[y1][x1].remove_top_wall();
-    cells[y2][x2].remove_bottom_wall();
-  } else if (x1 == x2 - 1 and y1 == y2) {  // c1 is above c2
-    cells[y1][x1].remove_bottom_wall();
-    cells[y2][x2].remove_top_wall();
+void Grid::remove_wall(int row1, int col1, int row2, int col2) {
+  if (row1 == row2) {        // same row
+    if (col1 == col2 + 1) {  // Cell 1 is to the right of Cell 2
+      cells[row1][col1].remove_left_wall();
+      cells[row2][col2].remove_right_wall();
+    } else if (col1 == col2 - 1) {  // Cell 1 is to the left of Cell 2
+      cells[row1][col1].remove_right_wall();
+      cells[row2][col2].remove_left_wall();
+    }
+  } else if (col1 == col2) {  // Same column
+    if (row1 == row2 + 1) {   // Cell 1 is below Cell2
+      cells[row1][col1].remove_top_wall();
+      cells[row2][col2].remove_bottom_wall();
+    } else if (row1 == row2 - 1) {  // Cell 1 is above Cell2
+      cells[row1][col1].remove_bottom_wall();
+      cells[row2][col2].remove_top_wall();
+    }
   }
 }
 
@@ -66,7 +71,7 @@ Cell& Grid::get_cell(int x, int y) { return cells[x][y]; }
 const Cell& Grid::get_cell(int x, int y) const { return cells[x][y]; }
 
 void Grid::set_cell_as_visited(int x, int y) {
-  get_cell(x,y).set_visited();
+  get_cell(x, y).set_visited();
 }
 
 void Grid::set_highlighted_cell(int x, int y) {
@@ -76,38 +81,38 @@ void Grid::set_highlighted_cell(int x, int y) {
 void Grid::reset_visits() {
   for (int i = 0; i < GRID_HEIGHT; ++i) {
     for (int j = 0; j < GRID_WIDTH; ++j) {
-      get_cell(i,j).reset();
+      get_cell(i, j).reset();
     }
   }
 }
 
-std::vector<std::pair<int, int>> Grid::get_neighbors(int x, int y, bool visited) const {
+std::vector<std::pair<int, int>> Grid::get_neighbors(int row, int col, bool visited) const {
   std::vector<std::pair<int, int>> res;
   if (visited) {
-    if (x > 0) {
-      res.push_back(std::make_pair(x - 1, y));
+    if (row > 0) {
+      res.push_back(std::make_pair(row - 1, col));
     }
-    if (x < GRID_HEIGHT - 1) {
-      res.push_back(std::make_pair(x + 1, y));
+    if (row < GRID_HEIGHT - 1) {
+      res.push_back(std::make_pair(row + 1, col));
     }
-    if (y > 0) {
-      res.push_back(std::make_pair(x, y - 1));
+    if (col > 0) {
+      res.push_back(std::make_pair(row, col - 1));
     }
-    if (y < GRID_WIDTH - 1) {
-      res.push_back(std::make_pair(x, y + 1));
+    if (col < GRID_WIDTH - 1) {
+      res.push_back(std::make_pair(row, col + 1));
     }
   } else {
-    if (x > 0 and !get_cell(x - 1, y).check_if_visited()) {
-      res.push_back(std::make_pair(x - 1, y));
+    if (row > 0 and !get_cell(row - 1, col).check_if_visited()) {
+      res.push_back(std::make_pair(row - 1, col));
     }
-    if (x < GRID_HEIGHT - 1 and !get_cell(x + 1, y).check_if_visited()) {
-      res.push_back(std::make_pair(x + 1, y));
+    if (row < GRID_HEIGHT - 1 and !get_cell(row + 1, col).check_if_visited()) {
+      res.push_back(std::make_pair(row + 1, col));
     }
-    if (y > 0 and !get_cell(x, y - 1).check_if_visited()) {
-      res.push_back(std::make_pair(x, y - 1));
+    if (col > 0 and !get_cell(row, col - 1).check_if_visited()) {
+      res.push_back(std::make_pair(row, col - 1));
     }
-    if (y < GRID_WIDTH - 1 and !get_cell(x, y + 1).check_if_visited()) {
-      res.push_back(std::make_pair(x, y + 1));
+    if (col < GRID_WIDTH - 1 and !get_cell(row, col + 1).check_if_visited()) {
+      res.push_back(std::make_pair(row, col + 1));
     }
   }
   return res;
@@ -115,7 +120,7 @@ std::vector<std::pair<int, int>> Grid::get_neighbors(int x, int y, bool visited)
 
 std::vector<std::pair<int, int>> Grid::get_neighbors_search(int row, int col) const {
   std::vector<std::pair<int, int>> result;
-  
+
   // Check top neighbor (row - 1, col)
   if (row > 0 && !cells[row][col].has_top_wall()) {
     result.push_back(std::make_pair(row - 1, col));
@@ -231,18 +236,20 @@ bool Grid::prim_maze_animation_step(std::vector<std::tuple<int, int, int, int>>&
 }
 
 void Grid::draw(sf::RenderWindow& window) {
-  float pos_x = WIDTH / 2 - GRID_HEIGHT * SQUARE_SIZE / 2;
-  float pos_y = HEIGHT / 2 - GRID_WIDTH * SQUARE_SIZE / 2 - 50;
+  float pos_x = WIDTH / 2 - GRID_WIDTH * SQUARE_SIZE / 2;
+  float pos_y = HEIGHT / 2 - GRID_HEIGHT * SQUARE_SIZE / 2 - 50;
 
   for (int i = 0; i < GRID_HEIGHT; ++i) {
     for (int j = 0; j < GRID_WIDTH; ++j) {
-      if (i == highlighted_cell.first and j == highlighted_cell.second)
+      if (i == highlighted_cell.first && j == highlighted_cell.second)
         cells[i][j].draw(
             window,
-            sf::Vector2f(pos_x + SQUARE_SIZE * i, pos_y + SQUARE_SIZE * j),
+            sf::Vector2f(pos_x + SQUARE_SIZE * j, pos_y + SQUARE_SIZE * i),
             true);
       else
-        cells[i][j].draw(window, sf::Vector2f(pos_x + SQUARE_SIZE * i, pos_y + SQUARE_SIZE * j));
+        cells[i][j].draw(
+            window,
+            sf::Vector2f(pos_x + SQUARE_SIZE * j, pos_y + SQUARE_SIZE * i));
     }
   }
 }

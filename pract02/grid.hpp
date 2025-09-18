@@ -18,8 +18,8 @@ class Grid {
  public:
   Grid();
 
-  void set_wall(int x1, int y1, int x2, int y2);
-  void remove_wall(int x1, int y1, int x2, int y2);
+  void set_wall(int row1, int col1, int row2, int col2);
+  void remove_wall(int row1, int col1, int row2, int col2);
   void set_entry(int x, int y);
   void set_exit(int x, int y);
 

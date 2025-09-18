@@ -15,25 +15,25 @@ bool dfs_animation_step(Grid& grid, std::stack<std::pair<int, int>>& stack, bool
   std::pair<int, int> current_cell = stack.top();
   stack.pop();
 
-  int x = current_cell.first;
-  int y = current_cell.second;
+  int row = current_cell.first;
+  int col = current_cell.second;
 
-  if (grid.get_cell(x, y).check_if_visited()) {
+  if (grid.get_cell(row, col).check_if_visited()) {
     return true;
   }
 
-  grid.set_cell_as_visited(x, y);
-  grid.set_highlighted_cell(x, y);
+  grid.set_cell_as_visited(row, col);
+  grid.set_highlighted_cell(row, col);
 
-  std::cout<< "DEBUG: Visiting: " << x << ","<< y << std::endl;
+  std::cout<< "DEBUG: Visiting: " << row << ","<< col << std::endl;
 
-  if (grid.get_cell(x, y).is_exit()) {
+  if (grid.get_cell(row, col).is_exit()) {
     std::cout << "DEBUG: Found exit!" << std::endl;
     found_exit = true;
     return false;
   }
 
-  auto neighbors = grid.get_neighbors_search(x, y);
+  auto neighbors = grid.get_neighbors_search(row, col);
   std::cout << "  Neighbors: ";
   for (const auto& n : neighbors) {
     std::cout << "(" << n.first << "," << n.second << ") ";
@@ -41,10 +41,10 @@ bool dfs_animation_step(Grid& grid, std::stack<std::pair<int, int>>& stack, bool
   std::cout<<std::endl;
 
   for (const auto& neighbor : neighbors) {
-    int nx = neighbor.first;
-    int ny = neighbor.second;
-    if (!grid.get_cell(nx, ny).check_if_visited()) {
-      grid.get_cell(nx, ny).set_direction(x, y);
+    int n_row = neighbor.first;
+    int n_col = neighbor.second;
+    if (!grid.get_cell(n_row, n_col).check_if_visited()) {
+      grid.get_cell(n_row, n_col).set_direction(row, col);
       stack.push(neighbor);
     }
   }
