@@ -53,17 +53,13 @@ void Grid::remove_wall(int row1, int col1, int row2, int col2) {
 }
 
 void Grid::set_entry(int x, int y) {
-  std::cout << "DEBUG: Setting entry at (" << x << "," << y << ")" << std::endl;
   cells[x][y].set_as_entry();
   cells[x][y].remove_left_wall();
-  std::cout << "DEBUG: Entry flag after setting: " << get_cell(x, y).is_entry() << std::endl;
 }
 
 void Grid::set_exit(int x, int y) {
-  std::cout << "DEBUG: Setting exit at (" << x << "," << y << ")" << std::endl;
   cells[x][y].set_as_exit();
   cells[x][y].remove_right_wall();
-  std::cout << "DEBUG: Exit flag after setting: " << get_cell(x, y).is_exit() << std::endl;
 }
 
 Cell& Grid::get_cell(int x, int y) { return cells[x][y]; }
@@ -259,15 +255,22 @@ void Grid::draw_path(sf::RenderWindow& window) {
   sf::RectangleShape path_rect(sf::Vector2f(SQUARE_SIZE, SQUARE_SIZE));
   path_rect.setFillColor(path_color);
 
+  float pos_x = WIDTH / 2 - GRID_WIDTH * SQUARE_SIZE / 2;
+  float pos_y = HEIGHT / 2 - GRID_HEIGHT * SQUARE_SIZE / 2 - 50;
+
   std::pair<int, int> current = {GRID_HEIGHT - 1, GRID_WIDTH - 1};
-
   while (current.first != 0 || current.second != 0) {
-    path_rect.setPosition(WIDTH / 2 - GRID_WIDTH * SQUARE_SIZE / 2 + SQUARE_SIZE * current.first, HEIGHT / 2 - GRID_WIDTH * SQUARE_SIZE / 2 - 50 + SQUARE_SIZE * current.second);
-    window.draw(path_rect);
+      // Draw the current cell as part of the path
+      path_rect.setPosition(pos_x + SQUARE_SIZE * current.second, pos_y + SQUARE_SIZE * current.first);
+      window.draw(path_rect);
 
-    std::pair<int, int> parent_dir = cells[current.first][current.second].get_direction();
-    current = parent_dir;
-  }
-  path_rect.setPosition(WIDTH / 2 - GRID_WIDTH * SQUARE_SIZE / 2, HEIGHT / 2 - GRID_WIDTH * SQUARE_SIZE / 2 - 50);
-  window.draw(path_rect);
+      // Get the coordinates of the parent cell
+      std::pair<int, int> parent_dir = cells[current.first][current.second].get_direction();
+      
+      // Move to the parent cell for the next iteration
+      current = parent_dir;
+    }
+    // Draw the starting cell (0, 0)
+    path_rect.setPosition(pos_x, pos_y);
+    window.draw(path_rect);
 }
