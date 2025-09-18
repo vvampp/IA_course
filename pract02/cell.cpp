@@ -30,24 +30,41 @@ Cell &Cell::operator=(const Cell &other) {
   return *this;
 }
 
-void Cell::clear_wall(const short side) {
-  switch (side) {
-    case Cell::TOP:
-      top = false;
-      break;
-    case Cell::LEFT:
-      left = false;
-      break;
-    case Cell::BOTTOM:
-      bottom = false;
-      break;
-    case Cell::RIGHT:
-      right = false;
-      break;
-    default:
-      puts("INVALID ENTRY !!");
-      break;
-  }
+bool Cell::check_if_visited() const {
+  return is_visited;
+}
+
+void Cell::set_visited() {
+  is_visited = true;
+}
+
+void Cell::set_direction(int x, int y) {
+  direction = std::make_pair(x, y);
+}
+
+std::pair<int, int> Cell::get_direction() {
+  return direction;
+}
+
+bool Cell::is_entry(){
+  return entry; 
+}
+
+bool Cell::is_exit(){
+  return exit;
+}
+
+void Cell::set_as_entry(){
+  entry = true;
+}
+
+void Cell::set_as_exit(){
+  exit = true;
+}
+
+void Cell::reset(){
+  is_visited = false;
+  direction = std::make_pair(-1,-1);
 }
 
 void Cell::draw(sf::RenderWindow &window, sf::Vector2f position, bool highlited) {
@@ -91,41 +108,3 @@ void Cell::draw(sf::RenderWindow &window, sf::Vector2f position, bool highlited)
     window.draw(bottomWall);
   }
 }
-
-bool Cell::check_if_visited() const {
-  return is_visited;
-}
-
-void Cell::set_visited() {
-  is_visited = true;
-}
-
-void Cell::set_direction(int x, int y) {
-  direction = std::make_pair(x, y);
-}
-
-std::pair<int, int> Cell::get_direction() {
-  return direction;
-}
-
-bool Cell::is_entry(){
-  return entry; 
-}
-
-bool Cell::is_exit(){
-  return exit;
-}
-
-void Cell::set_as_entry(){
-  entry = true;
-}
-
-void Cell::set_as_exit(){
-  exit = true;
-}
-
-void Cell::reset(){
-  is_visited = false;
-  direction = std::make_pair(-1,-1);
-}
-

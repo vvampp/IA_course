@@ -23,7 +23,7 @@ bool dfs_animation_step(Grid& grid, std::stack<std::pair<int, int>>& stack, bool
   }
 
   grid.set_cell_as_visited(x, y);
-  grid.set_highlited_cell(x, y);
+  grid.set_highlighted_cell(x, y);
 
   std::cout<< "DEBUG: Visiting: " << x << ","<< y << std::endl;
 
@@ -57,7 +57,7 @@ void dfs_animation(Grid& grid) {
   std::stack<std::pair<int, int>> stack;
   bool found_exit = false;
 
-  grid.set_highlited_cell(0, 0);
+  grid.set_highlighted_cell(0, 0);
   stack.push({0, 0});
 
 

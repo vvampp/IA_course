@@ -1,4 +1,4 @@
-#include "algorithms.hpp"
+#include "gen_algorithms.hpp"
 
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/Window/VideoMode.hpp>

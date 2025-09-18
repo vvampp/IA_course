@@ -1,5 +1,5 @@
-#ifndef ALGORITHMS_HPP
-#define ALGORITHMS_HPP
+#ifndef GEN_ALGORITHMS_HPP
+#define GEN_ALGORITHMS_HPP
 #include "grid.hpp"
 #include "CONSTANTS.HPP"
 

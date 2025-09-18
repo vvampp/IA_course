@@ -4,7 +4,7 @@
 #include <ostream>
 
 #include "CONSTANTS.HPP"
-#include "algorithms.hpp"
+#include "gen_algorithms.hpp"
 #include "search_algorithms.hpp"
 
 int main() {
@@ -29,10 +29,10 @@ int main() {
   for (int i = 0; i < GRID_HEIGHT; i++) {
     for (int j = 0; j < GRID_WIDTH; j++) {
       std::cout << "Cell (" << i << "," << j << "): ";
-      std::cout << "T=" << maze.get_cell(i, j).had_top_wall() << " ";
-      std::cout << "R=" << maze.get_cell(i, j).had_right_wall() << " ";
-      std::cout << "B=" << maze.get_cell(i, j).had_bottom_wall() << " ";
-      std::cout << "L=" << maze.get_cell(i, j).had_left_wall() << std::endl;
+      std::cout << "T=" << maze.get_cell(i, j).has_top_wall() << " ";
+      std::cout << "R=" << maze.get_cell(i, j).has_right_wall() << " ";
+      std::cout << "B=" << maze.get_cell(i, j).has_bottom_wall() << " ";
+      std::cout << "L=" << maze.get_cell(i, j).has_left_wall() << std::endl;
     }
   }
 

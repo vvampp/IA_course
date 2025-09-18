@@ -12,23 +12,22 @@
 
 Grid::Grid() {
   srand(time(0));
-  highlited_cell = std::make_pair(-1, -1);
+  highlighted_cell = std::make_pair(-1, -1);
 }
 
-void Grid::draw(sf::RenderWindow& window) {
-  float pos_x = WIDTH / 2 - GRID_HEIGHT * SQUARE_SIZE / 2;
-  float pos_y = HEIGHT / 2 - GRID_WIDTH * SQUARE_SIZE / 2 - 50;
-
-  for (int i = 0; i < GRID_HEIGHT; ++i) {
-    for (int j = 0; j < GRID_WIDTH; ++j) {
-      if (i == highlited_cell.first and j == highlited_cell.second)
-        cells[i][j].draw(
-            window,
-            sf::Vector2f(pos_x + SQUARE_SIZE * i, pos_y + SQUARE_SIZE * j),
-            true);
-      else
-        cells[i][j].draw(window, sf::Vector2f(pos_x + SQUARE_SIZE * i, pos_y + SQUARE_SIZE * j));
-    }
+void Grid::set_wall(int x1, int y1, int x2, int y2) {
+  if (x1 == x2 and y1 == y2 + 1) {  // c1 is to the right of c2
+    cells[y1][x1].add_left_wall();
+    cells[y2][x2].add_right_wall();
+  } else if (x1 == x2 and y1 == y2 - 1) {  // c1 is to the left of c2
+    cells[y1][x1].add_right_wall();
+    cells[y2][x2].add_left_wall();
+  } else if (x1 == x2 + 1 and y1 == y2) {  // c1 is below c2
+    cells[y1][x1].add_top_wall();
+    cells[y2][x2].add_bottom_wall();
+  } else if (x1 == x2 - 1 and y1 == y2) {  // c1 is above c2
+    cells[y1][x1].add_bottom_wall();
+    cells[y2][x2].add_top_wall();
   }
 }
 
@@ -62,22 +61,6 @@ void Grid::set_exit(int x, int y) {
   std::cout << "DEBUG: Exit flag after setting: " << get_cell(x, y).is_exit() << std::endl;
 }
 
-void Grid::set_wall(int x1, int y1, int x2, int y2) {
-  if (x1 == x2 and y1 == y2 + 1) {  // c1 is to the right of c2
-    cells[y1][x1].add_left_wall();
-    cells[y2][x2].add_right_wall();
-  } else if (x1 == x2 and y1 == y2 - 1) {  // c1 is to the left of c2
-    cells[y1][x1].add_right_wall();
-    cells[y2][x2].add_left_wall();
-  } else if (x1 == x2 + 1 and y1 == y2) {  // c1 is below c2
-    cells[y1][x1].add_top_wall();
-    cells[y2][x2].add_bottom_wall();
-  } else if (x1 == x2 - 1 and y1 == y2) {  // c1 is above c2
-    cells[y1][x1].add_bottom_wall();
-    cells[y2][x2].add_top_wall();
-  }
-}
-
 Cell& Grid::get_cell(int x, int y) { return cells[x][y]; }
 
 const Cell& Grid::get_cell(int x, int y) const { return cells[x][y]; }
@@ -86,8 +69,16 @@ void Grid::set_cell_as_visited(int x, int y) {
   get_cell(x,y).set_visited();
 }
 
-void Grid::set_highlited_cell(int x, int y) {
-  highlited_cell = std::make_pair(x, y);
+void Grid::set_highlighted_cell(int x, int y) {
+  highlighted_cell = std::make_pair(x, y);
+}
+
+void Grid::reset_visits() {
+  for (int i = 0; i < GRID_HEIGHT; ++i) {
+    for (int j = 0; j < GRID_WIDTH; ++j) {
+      get_cell(i,j).reset();
+    }
+  }
 }
 
 std::vector<std::pair<int, int>> Grid::get_neighbors(int x, int y, bool visited) const {
@@ -120,6 +111,48 @@ std::vector<std::pair<int, int>> Grid::get_neighbors(int x, int y, bool visited)
     }
   }
   return res;
+}
+
+std::vector<std::pair<int, int>> Grid::get_neighbors_search(int row, int col) const {
+  std::vector<std::pair<int, int>> result;
+  
+  // Check top neighbor (row - 1, col)
+  if (row > 0 && !cells[row][col].has_top_wall()) {
+    result.push_back(std::make_pair(row - 1, col));
+  }
+  // Check bottom neighbor (row + 1, col)
+  if (row < GRID_HEIGHT - 1 && !cells[row][col].has_bottom_wall()) {
+    result.push_back(std::make_pair(row + 1, col));
+  }
+  // Check left neighbor (row, col - 1)
+  if (col > 0 && !cells[row][col].has_left_wall()) {
+    result.push_back(std::make_pair(row, col - 1));
+  }
+  // Check right neighbor (row, col + 1)
+  if (col < GRID_WIDTH - 1 && !cells[row][col].has_right_wall()) {
+    result.push_back(std::make_pair(row, col + 1));
+  }
+  return result;
+}
+
+bool Grid::get_wall_between_cells(int x1, int y1, int x2, int y2) {
+  if (abs(x1 - x2) + abs(y1 - y2) != 1) {
+    return true;
+  }
+
+  if (x1 == x2) {
+    if (y1 > y2) {
+      return cells[x1][y1].has_right_wall();
+    } else {
+      return cells[x1][y1].has_left_wall();
+    }
+  } else {
+    if (x1 > x2) {
+      return cells[x1][y1].has_bottom_wall();
+    } else {
+      return cells[x1][y1].has_top_wall();
+    }
+  }
 }
 
 void Grid::prim_maze() {
@@ -197,52 +230,19 @@ bool Grid::prim_maze_animation_step(std::vector<std::tuple<int, int, int, int>>&
   return true;
 }
 
-void Grid::reset_visits() {
+void Grid::draw(sf::RenderWindow& window) {
+  float pos_x = WIDTH / 2 - GRID_HEIGHT * SQUARE_SIZE / 2;
+  float pos_y = HEIGHT / 2 - GRID_WIDTH * SQUARE_SIZE / 2 - 50;
+
   for (int i = 0; i < GRID_HEIGHT; ++i) {
     for (int j = 0; j < GRID_WIDTH; ++j) {
-      get_cell(i,j).reset();
-    }
-  }
-}
-std::vector<std::pair<int, int>> Grid::get_neighbors_search(int row, int col) const {
-  std::vector<std::pair<int, int>> result;
-  
-  // Check top neighbor (row - 1, col)
-  if (row > 0 && !cells[row][col].had_top_wall()) {
-    result.push_back(std::make_pair(row - 1, col));
-  }
-  // Check bottom neighbor (row + 1, col)
-  if (row < GRID_HEIGHT - 1 && !cells[row][col].had_bottom_wall()) {
-    result.push_back(std::make_pair(row + 1, col));
-  }
-  // Check left neighbor (row, col - 1)
-  if (col > 0 && !cells[row][col].had_left_wall()) {
-    result.push_back(std::make_pair(row, col - 1));
-  }
-  // Check right neighbor (row, col + 1)
-  if (col < GRID_WIDTH - 1 && !cells[row][col].had_right_wall()) {
-    result.push_back(std::make_pair(row, col + 1));
-  }
-  return result;
-}
-
-
-bool Grid::get_wall_between_cells(int x1, int y1, int x2, int y2) {
-  if (abs(x1 - x2) + abs(y1 - y2) != 1) {
-    return true;
-  }
-
-  if (x1 == x2) {
-    if (y1 > y2) {
-      return cells[x1][y1].had_right_wall();
-    } else {
-      return cells[x1][y1].had_left_wall();
-    }
-  } else {
-    if (x1 > x2) {
-      return cells[x1][y1].had_bottom_wall();
-    } else {
-      return cells[x1][y1].had_top_wall();
+      if (i == highlighted_cell.first and j == highlighted_cell.second)
+        cells[i][j].draw(
+            window,
+            sf::Vector2f(pos_x + SQUARE_SIZE * i, pos_y + SQUARE_SIZE * j),
+            true);
+      else
+        cells[i][j].draw(window, sf::Vector2f(pos_x + SQUARE_SIZE * i, pos_y + SQUARE_SIZE * j));
     }
   }
 }

@@ -13,28 +13,30 @@
 class Grid {
  private:
   Cell cells[GRID_HEIGHT][GRID_WIDTH];
-  std::pair<int, int> highlited_cell;
+  std::pair<int, int> highlighted_cell;
 
  public:
   Grid();
-  void draw(sf::RenderWindow &window);
+
+  void set_wall(int x1, int y1, int x2, int y2);
   void remove_wall(int x1, int y1, int x2, int y2);
   void set_entry(int x, int y);
   void set_exit(int x, int y);
-  void set_wall(int x1, int y1, int x2, int y2);
 
   Cell& get_cell(int x, int y);
   const Cell& get_cell(int x, int y) const;
-
   void set_cell_as_visited(int x, int y);
-  void set_highlited_cell(int x, int y);
+  void set_highlighted_cell(int x, int y);
+  void reset_visits();
+
   std::vector<std::pair<int, int>> get_neighbors(int x, int y, bool visited = false) const;
+  std::vector<std::pair<int,int>> get_neighbors_search(int x, int y) const;
+  bool get_wall_between_cells(int x1, int y1, int x2, int y2);
 
   void prim_maze();
   bool prim_maze_animation_step(std::vector<std::tuple<int, int, int, int>> &walls);
-  void reset_visits();
-  std::vector<std::pair<int,int>> get_neighbors_search(int x, int y) const;
-  bool get_wall_between_cells(int x1, int y1, int x2, int y2);
+
+  void draw(sf::RenderWindow &window);
   void draw_path(sf::RenderWindow& window);
 };
 #endif // !GRID_HPP
