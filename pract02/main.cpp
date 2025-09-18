@@ -31,7 +31,7 @@ int main() {
       dfs_animation(maze);
       break;
     case 1:
-      // implemnet BFS over grid
+      bfs_animation(maze);
       break;
     case 2:
       // implement A* over grid
