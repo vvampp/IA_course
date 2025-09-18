@@ -34,7 +34,7 @@ int main() {
       bfs_animation(maze);
       break;
     case 2:
-      // implement A* over grid
+      a_star_animation(maze);
       break;
   }
 }

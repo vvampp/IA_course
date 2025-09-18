@@ -10,6 +10,8 @@ typedef struct node node;
 
 int get_random_number(int max);
 
+int manhattan_distance(int row1, int col1, int row2, int col2);
+
 struct node {
   int prev_x, prev_y, current_x, current_y;
   node &operator=(const node &a) {
