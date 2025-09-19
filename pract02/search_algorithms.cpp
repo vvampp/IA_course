@@ -114,7 +114,7 @@ bool bfs_animation_step(Grid& grid, std::queue<std::pair<int, int>>& queue, bool
 }
 
 void bfs_animation(Grid& grid) {
-  sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "Depth First Search");
+  sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "Breadth First Search");
   std::queue<std::pair<int, int>> queue;
   bool found_exit = false;
 

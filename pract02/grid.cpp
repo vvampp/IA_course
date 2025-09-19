@@ -156,50 +156,6 @@ bool Grid::get_wall_between_cells(int x1, int y1, int x2, int y2) {
   }
 }
 
-void Grid::prim_maze() {
-  std::random_device rd;
-  std::mt19937 g(rd());
-
-  // Start with a random cell
-  int start_x = get_random_number(GRID_HEIGHT);
-  int start_y = get_random_number(GRID_WIDTH);
-  cells[start_x][start_y].set_visited();
-
-  // Add the walls of the cell to the list of walls
-  std::vector<std::tuple<int, int, int, int>> walls;
-  if (start_x > 0) walls.push_back(std::make_tuple(start_x, start_y, start_x - 1, start_y));
-  if (start_x < GRID_HEIGHT - 1) walls.push_back(std::make_tuple(start_x, start_y, start_x + 1, start_y));
-  if (start_y > 0) walls.push_back(std::make_tuple(start_x, start_y, start_x, start_y - 1));
-  if (start_y < GRID_WIDTH - 1) walls.push_back(std::make_tuple(start_x, start_y, start_x, start_y + 1));
-
-  // Loop until there are no walls left in the list
-  while (!walls.empty()) {
-    // : Randomly select a wall from the list
-    std::shuffle(walls.begin(), walls.end(), g);
-    auto wall = walls.back();
-    walls.pop_back();
-
-    int x1 = std::get<0>(wall);
-    int y1 = std::get<1>(wall);
-    int x2 = std::get<2>(wall);
-    int y2 = std::get<3>(wall);
-
-    // If only one of the two cells divided by the wall is visited
-    if (cells[x2][y2].check_if_visited() != cells[x1][y1].check_if_visited()) {
-      // Remove the wall between the two cells
-      remove_wall(x1, y1, x2, y2);
-
-      // Mark the unvisited cell as part of the maze
-      cells[x2][y2].set_visited();
-
-      // Add the neighboring walls of the cell to the list
-      if (x2 > 0 && !cells[x2 - 1][y2].check_if_visited()) walls.push_back(std::make_tuple(x2, y2, x2 - 1, y2));
-      if (x2 < GRID_HEIGHT - 1 && !cells[x2 + 1][y2].check_if_visited()) walls.push_back(std::make_tuple(x2, y2, x2 + 1, y2));
-      if (y2 > 0 && !cells[x2][y2 - 1].check_if_visited()) walls.push_back(std::make_tuple(x2, y2, x2, y2 - 1));
-      if (y2 < GRID_WIDTH - 1 && !cells[x2][y2 + 1].check_if_visited()) walls.push_back(std::make_tuple(x2, y2, x2, y2 + 1));
-    }
-  }
-}
 
 bool Grid::prim_maze_animation_step(std::vector<std::tuple<int, int, int, int>>& walls) {
   if (walls.empty()) return false;

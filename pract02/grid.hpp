@@ -33,7 +33,6 @@ class Grid {
   std::vector<std::pair<int,int>> get_neighbors_search(int x, int y) const;
   bool get_wall_between_cells(int x1, int y1, int x2, int y2);
 
-  void prim_maze();
   bool prim_maze_animation_step(std::vector<std::tuple<int, int, int, int>> &walls);
 
   void draw(sf::RenderWindow &window);
