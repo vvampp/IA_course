@@ -3,7 +3,7 @@
 
 Board::Board() : currentPlayer(X_PLAYER), gameState(RUNNING), movesMade(0) {
   // Grid initialization
-  for (int i = 0 ; int < BOARD_SIZE ; ++i)
+  for (int i = 0 ; i < BOARD_SIZE ; ++i)
     for (int j = 0 ; j < BOARD_SIZE; ++j){
       float x = (float)j * SQUARE_SIZE;
       float y = (float)i * SQUARE_SIZE;
@@ -16,14 +16,14 @@ void Board::drawGrid(sf::RenderWindow& window) const {
 
   for (int j = 1 ; j < BOARD_SIZE ; ++j){
     sf::RectangleShape line(sf::Vector2f(LINE_THICKNESS, board_length));
-    line.setColor(sf::Color::White);
+    line.setFillColor(sf::Color::White);
     line.setPosition((float)j * SQUARE_SIZE - LINE_THICKNESS / 2.0f, 0.0f);
     window.draw(line);
   }
 
   for (int i = 1; i < BOARD_SIZE; ++i){
     sf::RectangleShape line(sf::Vector2f(board_length,LINE_THICKNESS));
-    line.setColor(sf::Color::White);
+    line.setFillColor(sf::Color::White);
     line.setPosition(0.0f, (float)i * SQUARE_SIZE - LINE_THICKNESS / 2.0f);
     window.draw(line);
   }
@@ -43,23 +43,23 @@ GameState Board::checkWin(){
       if(row_win || col_win) return true;
     }
 
-    bool diag_win = true;
+    bool diag_win1 = true;
     // Check diagonal (top-left -> bottom-right)
     for (int i = 0; i < BOARD_SIZE ; ++i){
       if(grid[i][i].getState() != player){
-        diag_win = false;
+        diag_win1 = false;
         break;
       }
     }
     // Check anti diagonal (top-right -> bottom-left)
-    bool
+    bool diag_win2 = true;
     for (int i = 0; i < BOARD_SIZE ; ++i){
       if(grid[i][BOARD_SIZE-1-i].getState() != player){
-        diag_win = false;
+        diag_win2 = false;
         break;
       }
     }
-    if (diag_win) return true;
+    if (diag_win1 || diag_win2) return true;
     return false;
   };
 
@@ -101,7 +101,7 @@ void Board::drawBoard(sf::RenderWindow& window) const {
   }
 }
 
-GameState getGameState() const {
+GameState Board::getGameState() const {
   return gameState;
 }
 

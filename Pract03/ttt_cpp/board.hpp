@@ -1,6 +1,7 @@
 #ifndef BOARD_HPP
 #define BOARD_HPP
 
+#include "SFML/Graphics.hpp"
 #include "CONSTANTS.HPP"
 #include "cell.hpp"
 #include <array>
@@ -28,6 +29,6 @@ class Board{
     void drawBoard(sf::RenderWindow& window) const;
     GameState getGameState() const;
     void reset();
-}
+};
 
 #endif

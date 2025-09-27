@@ -10,7 +10,7 @@ SFML_LIBRARIES = -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio
 SOURCE = *.cpp
 
 # Build target
-TARGET = mazes
+TARGET = tic_tac_toe
 
 all: $(TARGET)
 	@echo "\n Build completed successfully! Run ./$(TARGET) to execute the program!"

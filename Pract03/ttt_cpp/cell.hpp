@@ -1,5 +1,6 @@
 #ifndef CELL_HPP
 #define CELL_HPP
+#include <SFML/Graphics.hpp>
 
 enum CellState {
   EMPTY,
@@ -13,12 +14,13 @@ class Cell {
     sf::Vector2f position;
     float size;
   public:
+    Cell();
     Cell(float x, float y, float s);
 
     void setState(CellState state);
     CellState getState() const;
 
     void draw(sf::RenderWindow& window) const;
-}
+};
 
 #endif

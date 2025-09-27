@@ -1,6 +1,11 @@
 #include "CONSTANTS.HPP"
 #include "cell.hpp"
 
+Cell::Cell()
+  : state(EMPTY), position(0.0f,0.0f), size(0.0f){
+    // Empty initialization complete
+  }
+
 Cell::Cell(float x, float y, float s)
   : state(EMPTY), position(x,y), size(s){
     // Initialization complete ...
@@ -30,7 +35,7 @@ void Cell::draw(sf::RenderWindow& window) const {
 
     sf::RectangleShape X_line2(sf::Vector2f(inner_size*1.4f, thickness));
     X_line2.setFillColor(sf::Color::White);
-    X_line2.setPosition(draw_pos);
+    X_line2.setPosition(draw_pos.x, draw_pos.y + inner_size);
     X_line2.rotate(-45.0f);
     window.draw(X_line2);
 
