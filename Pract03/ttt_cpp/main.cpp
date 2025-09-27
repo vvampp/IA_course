@@ -5,7 +5,7 @@
 
 
 int main() {
-    sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "4x4 Tic-Tac-Toe (SFML)");
+    sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "Tic-Tac-Toe!");
     window.setFramerateLimit(60);
 
     Board gameBoard;
@@ -45,7 +45,7 @@ int main() {
         }
 
         window.clear(sf::Color::Black);
-        gameBoard.drawBoard(window);
+        gameBoard.draw(window);
         window.display();
     }
 

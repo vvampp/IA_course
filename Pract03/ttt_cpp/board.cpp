@@ -92,7 +92,7 @@ bool Board::handleClick(float mouseX, float mouseY){
   return false;
 }
 
-void Board::drawBoard(sf::RenderWindow& window) const {
+void Board::draw(sf::RenderWindow& window) const {
   drawGrid(window);
   for(int i = 0; i < BOARD_SIZE; ++i){
     for(int j = 0; j < BOARD_SIZE; ++j){

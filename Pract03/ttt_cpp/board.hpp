@@ -26,7 +26,7 @@ class Board{
   public:
     Board();
     bool handleClick(float mouseX, float mouseY);
-    void drawBoard(sf::RenderWindow& window) const;
+    void draw(sf::RenderWindow& window) const;
     GameState getGameState() const;
     void reset();
 };
