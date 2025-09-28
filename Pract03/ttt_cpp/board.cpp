@@ -5,26 +5,25 @@ Board::Board() : currentPlayer(X_PLAYER), gameState(RUNNING), movesMade(0) {
   // Grid initialization
   for (int i = 0 ; i < BOARD_SIZE ; ++i)
     for (int j = 0 ; j < BOARD_SIZE; ++j){
-      float x = (float)j * SQUARE_SIZE;
-      float y = (float)i * SQUARE_SIZE;
+      float x = (float)j * SQUARE_SIZE + PADDING_X;
+      float y = (float)i * SQUARE_SIZE + PADDING_Y;
       grid[i][j] = Cell(x,y,SQUARE_SIZE);
     }
 }
 
 void Board::drawGrid(sf::RenderWindow& window) const {
-  const float board_length = (float) BOARD_SIZE * SQUARE_SIZE;
 
   for (int j = 1 ; j < BOARD_SIZE ; ++j){
-    sf::RectangleShape line(sf::Vector2f(LINE_THICKNESS, board_length));
+    sf::RectangleShape line(sf::Vector2f(LINE_THICKNESS, BOARD_LENGHT));
     line.setFillColor(sf::Color::White);
-    line.setPosition((float)j * SQUARE_SIZE - LINE_THICKNESS / 2.0f, 0.0f);
+    line.setPosition((float)j * SQUARE_SIZE - LINE_THICKNESS / 2.0f + PADDING_X, 0.0f + PADDING_Y);
     window.draw(line);
   }
 
   for (int i = 1; i < BOARD_SIZE; ++i){
-    sf::RectangleShape line(sf::Vector2f(board_length,LINE_THICKNESS));
+    sf::RectangleShape line(sf::Vector2f(BOARD_LENGHT,LINE_THICKNESS));
     line.setFillColor(sf::Color::White);
-    line.setPosition(0.0f, (float)i * SQUARE_SIZE - LINE_THICKNESS / 2.0f);
+    line.setPosition(0.0f+PADDING_X, (float)i * SQUARE_SIZE - LINE_THICKNESS / 2.0f + PADDING_Y);
     window.draw(line);
   }
 }
@@ -73,8 +72,8 @@ bool Board::handleClick(float mouseX, float mouseY){
   if(gameState != RUNNING)
     return false;
   
-  int col = (int)(mouseX/SQUARE_SIZE);
-  int row = (int)(mouseY/SQUARE_SIZE);
+  int col = (int)((mouseX-PADDING_X)/SQUARE_SIZE);
+  int row = (int)((mouseY-PADDING_Y)/SQUARE_SIZE);
 
   if(row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE){
     if(grid[row][col].getState() == EMPTY){
