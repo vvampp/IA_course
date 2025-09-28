@@ -1,0 +1,6 @@
+#ifndef ALPHA_BETA_PRUNING
+#define ALPHA_BETA_PRUNING
+
+
+
+#endif // !ALPHA_BETA_PRUNING

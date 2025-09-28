@@ -2,7 +2,7 @@
 CC = g++
 
 # compiler flags
-CFLAGS = -std=c++11 -Wall
+CFLAGS = -std=c++17 -Wall
 
 # SFML libraries
 SFML_LIBRARIES = -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio

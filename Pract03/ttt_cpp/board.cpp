@@ -68,6 +68,25 @@ GameState Board::checkWin(){
   return RUNNING;
 }
 
+std::vector<std::pair<int ,int >> Board::getMoves() const {
+  std::vector<std::pair<int, int>> moves;
+
+  
+  for(int i = 0; i < BOARD_SIZE ; ++i)
+    for(int j = 0; j < BOARD_SIZE ; ++j)
+      if(grid[i][j].getState() == EMPTY){
+        std::pair<int, int> move = std::make_pair(i,j);
+        moves.push_back(move);
+      }
+
+  //std::cout<<"Possible moves: ";
+  //for(const auto& [x,y] : moves)
+        //td::cout<< "(" << x << "," << y << ")\t";
+  //std::cout<<std::endl;
+
+  return moves;
+}
+
 bool Board::handleClick(float mouseX, float mouseY){
   if(gameState != RUNNING)
     return false;
@@ -79,10 +98,11 @@ bool Board::handleClick(float mouseX, float mouseY){
     if(grid[row][col].getState() == EMPTY){
       grid[row][col].setState(currentPlayer);
       movesMade++;
-
+      
       gameState = checkWin();
 
       if(gameState == RUNNING){
+        std::vector<std::pair<int, int>> moves = getMoves();
         currentPlayer = (currentPlayer == X_PLAYER)? O_PLAYER : X_PLAYER;
       }
       return true;
@@ -112,3 +132,4 @@ void Board::reset(){
   gameState = RUNNING;
   movesMade = 0;
 }
+

@@ -5,6 +5,7 @@
 #include "CONSTANTS.HPP"
 #include "cell.hpp"
 #include <array>
+#include <vector>
 
 enum GameState {
   RUNNING,
@@ -29,6 +30,7 @@ class Board{
     void draw(sf::RenderWindow& window) const;
     GameState getGameState() const;
     void reset();
+    std::vector<std::pair<int, int>> getMoves() const;
 };
 
 #endif
