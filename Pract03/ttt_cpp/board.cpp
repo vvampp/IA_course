@@ -1,4 +1,5 @@
 #include "board.hpp"
+#include "alpha_beta_minmax.hpp"
 #include <iostream>
 
 Board::Board() : currentPlayer(X_PLAYER), gameState(RUNNING), movesMade(0) {
@@ -9,6 +10,19 @@ Board::Board() : currentPlayer(X_PLAYER), gameState(RUNNING), movesMade(0) {
       float y = (float)i * SQUARE_SIZE + PADDING_Y;
       grid[i][j] = Cell(x,y,SQUARE_SIZE);
     }
+}
+
+void Board::setCellState(int row, int col, CellState state){
+  grid[row][col].setState(state);
+}
+
+void Board::incrementMoves(){
+  movesMade++;
+}
+
+GameState Board::evaluateGame(){
+  gameState = checkWin();
+  return gameState;
 }
 
 void Board::drawGrid(sf::RenderWindow& window) const {
@@ -70,7 +84,6 @@ GameState Board::checkWin(){
 
 std::vector<std::pair<int ,int >> Board::getMoves() const {
   std::vector<std::pair<int, int>> moves;
-
   
   for(int i = 0; i < BOARD_SIZE ; ++i)
     for(int j = 0; j < BOARD_SIZE ; ++j)
@@ -87,6 +100,14 @@ std::vector<std::pair<int ,int >> Board::getMoves() const {
   return moves;
 }
 
+Board Board::calculateMove(std::pair<int,int> move, CellState player){
+  Board board_copy = *this;
+  board_copy.grid[move.first][move.second].setState(player);
+  board_copy.incrementMoves();
+  board_copy.evaluateGame();
+  return board_copy;
+}
+
 bool Board::handleClick(float mouseX, float mouseY){
   if(gameState != RUNNING)
     return false;
@@ -98,12 +119,14 @@ bool Board::handleClick(float mouseX, float mouseY){
     if(grid[row][col].getState() == EMPTY){
       grid[row][col].setState(currentPlayer);
       movesMade++;
-      
       gameState = checkWin();
 
       if(gameState == RUNNING){
-        std::vector<std::pair<int, int>> moves = getMoves();
-        currentPlayer = (currentPlayer == X_PLAYER)? O_PLAYER : X_PLAYER;
+        currentPlayer = O_PLAYER;
+        makeMove(*this);
+
+        if(gameState == RUNNING)
+          currentPlayer = X_PLAYER;
       }
       return true;
     }
@@ -132,4 +155,3 @@ void Board::reset(){
   gameState = RUNNING;
   movesMade = 0;
 }
-

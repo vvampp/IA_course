@@ -26,11 +26,17 @@ class Board{
 
   public:
     Board();
+
+    void setCellState(int row, int col, CellState state);
+    void incrementMoves();
+    GameState evaluateGame();
+
     bool handleClick(float mouseX, float mouseY);
     void draw(sf::RenderWindow& window) const;
     GameState getGameState() const;
     void reset();
     std::vector<std::pair<int, int>> getMoves() const;
+    Board calculateMove(std::pair<int,int> move, CellState player);
 };
 
 #endif
