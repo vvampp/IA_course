@@ -56,7 +56,7 @@ std::pair<int,std::pair<int,int>> alpha_beta_minmax(Board board, int depth, Cell
 }
 
 void makeMove(Board& board){
-  auto result = alpha_beta_minmax(board,4,O_PLAYER,INT_MIN,INT_MAX);
+  auto result = alpha_beta_minmax(board,6,O_PLAYER,INT_MIN,INT_MAX);
   std::pair<int,int> move = result.second;
   if(move.first != -1 && move.second != -1){
     // board.grid[move.first][move.second].setState(O_PLAYER);
