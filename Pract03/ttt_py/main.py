@@ -1,4 +1,5 @@
 import turtle 
+import sys
 import copy
 from enum import Enum
 
@@ -132,12 +133,16 @@ class Board:
         moves = []
         for r in range(BOARD_SIZE):
             for c in range(BOARD_SIZE):
-                if self.grid[r][c].get_state() == GameState.EMPTY:
+                if self.grid[r][c].get_state() == CellState.EMPTY:
                     moves.append((r,c))
         return moves
     
     def calculate_move(self, move: tuple[int,int], player: CellState):
-        board_copy = copy.deepcopy(self)
+        board_copy = Board(pen=None,window=None)
+        board_copy.grid = copy.deepcopy(self.grid)
+        board_copy.moves_made = self.moves_made 
+        board_copy.current_player = self.current_player
+
         board_copy.set_cell_state(move[0],move[1],player)
         board_copy.increment_moves()
         board_copy.evaluate_game()
@@ -156,6 +161,28 @@ class Board:
                 self.moves_made += 1
                 self.game_state = self.check_win()
 
+
+                if self.game_state == GameState.RUNNING:
+                    self.current_player = CellState.O_PLAYER
+
+                    make_move(self)
+
+                    self.game_state = self.check_win()
+
+                if self.game_state == GameState.RUNNING:
+                    self.current_player = CellState.X_PLAYER
+
+                # Two human players
+                #if self.game_state == GameState.RUNNING:
+                #    if self.current_player == CellState.X_PLAYER:
+                #        self.current_player = CellState.O_PLAYER
+                #    else:
+                #        self.current_player = CellState.X_PLAYER
+
+                self.pen.clear()
+                self.draw(self.pen)
+                self.window.update()
+
                 if self.game_state == GameState.X_WINS:
                     print("X Player wins!")
                 if self.game_state == GameState.O_WINS:
@@ -163,31 +190,71 @@ class Board:
                 if self.game_state == GameState.DRAW:
                     print("Game Over, it's a draw...")
 
-                #if self.game_state == GameState.RUNNING:
-                    #self.current_player = CellState.O_PLAYER
-
-                    # Call to IA
-
-                    #self.game_state = self.check_win()
-                if self.game_state == GameState.RUNNING:
-                    if self.current_player == CellState.X_PLAYER:
-                        self.current_player = CellState.O_PLAYER
-                    else:
-                        self.current_player = CellState.X_PLAYER
-                self.pen.clear()
-                self.draw(self.pen)
-                self.window.update()
-
     def get_game_state(self) -> GameState:
         return self.game_state
 
     def reset(self):
-        self.__init__()
+        self.current_player = CellState.X_PLAYER
+        self.game_state = GameState.RUNNING
+        self.moves_made = 0
+        for row in self.grid:
+            for cell in row:
+                cell.set_state(CellState.EMPTY)
 
 
-def get_coordinates(x,y):
-    print(f'Clicked over x={x}, y={y}')
+def utility(board: Board) -> int:
+    game_state = board.get_game_state()
+    if game_state == GameState.X_WINS:
+        return -1
+    if game_state == GameState.DRAW:
+        return 0
+    if game_state == GameState.O_WINS:
+        return 1
+    else:
+        return 0
 
+def is_terminal_state(board: Board) -> bool:
+    return not board.get_moves() or board.get_game_state() != GameState.RUNNING
+
+def alpha_beta_minmax(board: Board, depth: int, player: CellState, alpha: int, beta: int) -> tuple[int,tuple[int,int]]:
+    if(is_terminal_state(board) or depth == 0):
+        return (utility(board), (-1,-1))
+
+    best_move = (-1,-1)
+
+    if player == CellState.O_PLAYER:
+        max_eval = -sys.maxsize
+        for move in board.get_moves():
+            new_board = board.calculate_move(move,CellState.O_PLAYER)
+            eval,_ = alpha_beta_minmax(new_board, depth-1, CellState.X_PLAYER, alpha, beta)
+            if eval > max_eval:
+                max_eval = eval
+                best_move = move
+            alpha = max(alpha,eval) 
+            if alpha >= beta:
+                break
+        return (max_eval,best_move)
+    else:
+        min_eval = sys.maxsize
+        for move in board.get_moves():
+            new_board = board.calculate_move(move,CellState.X_PLAYER)
+            eval,_ = alpha_beta_minmax(new_board,depth-1, CellState.O_PLAYER, alpha, beta)
+            if eval < min_eval:
+                min_eval = eval
+                best_move = move
+            beta = min(beta,eval)
+            if beta <= alpha:
+                break
+        return (min_eval, best_move)
+
+
+def make_move(board: Board):
+    result = alpha_beta_minmax(board,6,CellState.O_PLAYER,-sys.maxsize,sys.maxsize)
+    move = result[1]
+    if move[0] != -1 and move[1] != -1:
+        board.set_cell_state(move[0], move[1], CellState.O_PLAYER)
+        board.increment_moves()
+        board.evaluate_game()
 
 def main():
     window = turtle.Screen()
@@ -200,11 +267,20 @@ def main():
     pen.speed(0)
 
     game_board = Board(pen,window)
+
+    def restart_game():
+        game_board.reset()
+        pen.clear()
+        game_board.draw(pen)
+        window.update()
+
+    window.onscreenclick(game_board.handle_click)
+
+    window.listen()
+    window.onkey(restart_game, 'r')
+
     game_board.draw(pen)
     window.update()
-
-    window.onscreenclick(get_coordinates)
-    window.onscreenclick(game_board.handle_click)
 
     turtle.done()
 
