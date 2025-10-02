@@ -63,9 +63,11 @@ class GameState(Enum):
     DRAW = 3
 
 class Board:
-    def __init__(self):
-        self.current_player = GameState.RUNNING
-        self.game_state = CellState.X_PLAYER
+    def __init__(self, pen: turtle.Turtle, window: turtle.Screen):
+        self.pen = pen
+        self.window = window
+        self.current_player = CellState.X_PLAYER 
+        self.game_state = GameState.RUNNING
         self.moves_made = 0
 
         self.grid = [
@@ -89,7 +91,7 @@ class Board:
     def evaluate_game(self) -> GameState:
         self.game_state = self.check_win()
 
-    def draw_grid(self, pen: turtle.Turtle):
+    def draw(self, pen: turtle.Turtle):
         pen.width(LINE_THICKNESS)
         for i in range(1,BOARD_SIZE):
             pen.penup()
@@ -154,16 +156,27 @@ class Board:
                 self.moves_made += 1
                 self.game_state = self.check_win()
 
-                if self.game_state == GameState.RUNNING:
-                    self.current_player = CellState.O_PLAYER
+                if self.game_state == GameState.X_WINS:
+                    print("X Player wins!")
+                if self.game_state == GameState.O_WINS:
+                    print("O Player wins!")
+                if self.game_state == GameState.DRAW:
+                    print("Game Over, it's a draw...")
+
+                #if self.game_state == GameState.RUNNING:
+                    #self.current_player = CellState.O_PLAYER
 
                     # Call to IA
 
-                    self.game_state = self.check_win()
-                    if self.game_state == GameState.RUNNING:
+                    #self.game_state = self.check_win()
+                if self.game_state == GameState.RUNNING:
+                    if self.current_player == CellState.X_PLAYER:
+                        self.current_player = CellState.O_PLAYER
+                    else:
                         self.current_player = CellState.X_PLAYER
-            return True
-        return False
+                self.pen.clear()
+                self.draw(self.pen)
+                self.window.update()
 
     def get_game_state(self) -> GameState:
         return self.game_state
@@ -180,9 +193,20 @@ def main():
     window = turtle.Screen()
     window.setup(WIDTH,HEIGHT)
     window.title("Tic Tac Toe")
-    window.onscreenclick(get_coordinates)
-    turtle.done()
+    window.tracer(0)
 
+    pen = turtle.Turtle()
+    pen.hideturtle()
+    pen.speed(0)
+
+    game_board = Board(pen,window)
+    game_board.draw(pen)
+    window.update()
+
+    window.onscreenclick(get_coordinates)
+    window.onscreenclick(game_board.handle_click)
+
+    turtle.done()
 
 if __name__ == "__main__":
     main()
