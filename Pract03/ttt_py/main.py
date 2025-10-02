@@ -1,10 +1,19 @@
 import turtle 
+import copy
 from enum import Enum
 
+WIDTH = 600
+HEIGHT = 600 
 BOARD_SIZE = 3
 LINE_THICKNESS = 6
+SQUARE_SIZE = 120
+BOARD_LENGHT = BOARD_SIZE * SQUARE_SIZE
 
-class CellState(enum):
+PADDING_X = -BOARD_LENGHT / 2
+PADDING_Y = -BOARD_LENGHT / 2
+
+# Cell class implementation
+class CellState(Enum):
     EMPTY = 0
     X_PLAYER = 1
     O_PLAYER = 2
@@ -40,11 +49,127 @@ class Cell:
             pen.pendown()
             pen.goto(draw_x + inner_size, draw_y)
 
-        elif self.state == CellState.O_PLAYER
+        elif self.state == CellState.O_PLAYER:
             pen.penup()
             pen.goto(draw_x + inner_size/2, draw_y)
             pen.pendown()
             pen.circle(inner_size/2)
+
+# Board class implementation
+class GameState(Enum):
+    RUNNING = 0
+    X_WINS = 1
+    O_WINS = 2
+    DRAW = 3
+
+class Board:
+    def __init__(self):
+        self.current_player = GameState.RUNNING
+        self.game_state = CellState.X_PLAYER
+        self.moves_made = 0
+
+        self.grid = [
+                [
+                    Cell(
+                        x = col * SQUARE_SIZE + PADDING_X,
+                        y = row * SQUARE_SIZE + PADDING_Y,
+                        size = SQUARE_SIZE
+                        )
+                    for col in range(BOARD_SIZE)
+                    ]
+                for row in range(BOARD_SIZE)
+                ]
+
+    def set_cell_state(self, row, col, state):
+        self.grid[row][col].set_state(state)
+
+    def increment_moves(self):
+        self.moves_made += 1
+
+    def evaluate_game(self) -> GameState:
+        self.game_state = self.check_win()
+
+    def draw_grid(self, pen: turtle.Turtle):
+        pen.width(LINE_THICKNESS)
+        for i in range(1,BOARD_SIZE):
+            pen.penup()
+            pen.goto(PADDING_X + i * SQUARE_SIZE, PADDING_Y)
+            pen.pendown()
+            pen.goto(PADDING_X + i * SQUARE_SIZE, PADDING_Y + BOARD_LENGHT)
+            pen.penup()
+            pen.goto(PADDING_X, PADDING_Y + i * SQUARE_SIZE)
+            pen.pendown()
+            pen.goto(PADDING_X + BOARD_LENGHT, PADDING_Y + i * SQUARE_SIZE)
+
+        for row in self.grid:
+            for cell in row:
+                cell.draw(pen)
+
+    def check_win(self):
+        def _check_player(player: CellState) -> bool:
+            for i in range(BOARD_SIZE):
+                row_win = all(self.grid[i][j].get_state() == player for j in range(BOARD_SIZE))
+                col_win = all(self.grid[j][i].get_state() == player for j in range(BOARD_SIZE))
+                if row_win or col_win:
+                    return True
+
+            diag1_win = all(self.grid[i][i].get_state() == player for i in range(BOARD_SIZE))
+            diag2_win = all(self.grid[i][BOARD_SIZE-1-i].get_state() == player for i in range(BOARD_SIZE))
+
+            return diag1_win or diag2_win
+
+        if _check_player(CellState.X_PLAYER):
+            return GameState.X_WINS
+        if _check_player(CellState.O_PLAYER):
+            return GameState.O_WINS
+        if self.moves_made == BOARD_SIZE * BOARD_SIZE:
+            return GameState.DRAW
+        return GameState.RUNNING
+
+    def get_moves(self) -> list[tuple[int,int]]:
+        moves = []
+        for r in range(BOARD_SIZE):
+            for c in range(BOARD_SIZE):
+                if self.grid[r][c].get_state() == GameState.EMPTY:
+                    moves.append((r,c))
+        return moves
+    
+    def calculate_move(self, move: tuple[int,int], player: CellState):
+        board_copy = copy.deepcopy(self)
+        board_copy.set_cell_state(move[0],move[1],player)
+        board_copy.increment_moves()
+        board_copy.evaluate_game()
+        return board_copy
+
+    def handle_click(self, mouse_x: float, mouse_y: float) -> bool:
+        if self.game_state != GameState.RUNNING:
+            return False
+
+        col = int((mouse_x - PADDING_X) / SQUARE_SIZE)
+        row = int((mouse_y - PADDING_Y) / SQUARE_SIZE)
+
+        if 0 <= row < BOARD_SIZE and 0 <= col < BOARD_SIZE:
+            if self.grid[row][col].get_state() == CellState.EMPTY:
+                self.set_cell_state(row, col, self.current_player)
+                self.moves_made += 1
+                self.game_state = self.check_win()
+
+                if self.game_state == GameState.RUNNING:
+                    self.current_player = CellState.O_PLAYER
+
+                    # Call to IA
+
+                    self.game_state = self.check_win()
+                    if self.game_state == GameState.RUNNING:
+                        self.current_player = CellState.X_PLAYER
+            return True
+        return False
+
+    def get_game_state(self) -> GameState:
+        return self.game_state
+
+    def reset(self):
+        self.__init__()
 
 
 def get_coordinates(x,y):
@@ -53,6 +178,7 @@ def get_coordinates(x,y):
 
 def main():
     window = turtle.Screen()
+    window.setup(WIDTH,HEIGHT)
     window.title("Tic Tac Toe")
     window.onscreenclick(get_coordinates)
     turtle.done()
