@@ -5,7 +5,7 @@
 
 #define DOMAIN_LOWER -5.0
 #define DOMAIN_UPPER 5.0
-#define MAX_ITER 100000000
+#define MAX_ITER 1000000
 
 enum CoolingSchedule { LINEAR, EXPONENTIAL, LOGARITHMIC };
 
@@ -109,7 +109,7 @@ void simulated_annealing(CoolingSchedule cooling_type, double s_temp,
 }
 
 int main() {
-  double temp = 1000.0;
+  double temp = 100.0;
   std::cout << "Linear cooling" << std::endl;
   simulated_annealing(LINEAR, temp, 100.0 / MAX_ITER, MAX_ITER);
   std::cout << "Exponential cooling" << std::endl;
