@@ -14,6 +14,10 @@ public:
   RedBlackTree();
   Node* get_root();
   void insert(int data);
+  Node* search(Node* node, int key);
+  Node* minimum(Node* node);
+  void transplant(Node* u, Node* v);
 };
+
 
 #endif // !RED_BLACK_TREE_HPP
