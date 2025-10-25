@@ -1,0 +1,19 @@
+Properties of Red-Black Trees
+
+1. Each node is either Red or Black
+2. The root is always Black
+3. Every leaf (NIL) is Black
+4. If a node ir Red, both children must be Black
+5. Every path from a node to its descendant NIL nodes must have the same amount of black nodes
+
+
+Relevant formulas
+
+- h <= 2h_b
+- n >= 2^h_b - 1
+
+where h_b (black height) is the minimum number of black nodes from the root to a leaf
+
+on solving this equations:
+
+- h <= 2log_2(n+1)
