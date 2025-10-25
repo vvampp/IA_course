@@ -2,6 +2,9 @@
 
 RedBlackTree::RedBlackTree() : NIL(Node()), root(&NIL) {}
 
+Node* RedBlackTree::get_root(){
+  return root;
+}
 void RedBlackTree::rotate_left(Node* x){
 
   // y is defined as the rigth child of x
@@ -88,7 +91,7 @@ void RedBlackTree::insert(int data){
   }
 
   // set parent once the traversal is done
-  new_node->parent = current->parent;
+  new_node->parent = parent;
   // check if root
   if (new_node->parent == nullptr)
     root = new_node;

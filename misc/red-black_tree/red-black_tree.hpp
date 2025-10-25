@@ -12,6 +12,7 @@ private:
 
 public:
   RedBlackTree();
+  Node* get_root();
   void insert(int data);
 };
 
