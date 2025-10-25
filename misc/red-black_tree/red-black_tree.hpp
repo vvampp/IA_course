@@ -3,14 +3,16 @@
 #include "node.hpp"
 
 class RedBlackTree{
-public:
-  RedBlackTree();
+private:
   Node NIL;
   Node* root;
   void rotate_left(Node* x);
   void rotate_right(Node* y);
-  void insert(int data);
   void fix_insert(Node* z);
+
+public:
+  RedBlackTree();
+  void insert(int data);
 };
 
 #endif // !RED_BLACK_TREE_HPP
