@@ -1,4 +1,5 @@
 #include "red-black_tree.hpp"
+#include "node.hpp"
 
 RedBlackTree::RedBlackTree() : NIL(Node()), root(&NIL) {}
 
@@ -171,8 +172,112 @@ void RedBlackTree::transplant(Node* u, Node* v){
   v->parent = u->parent;
 }
 
+void RedBlackTree::delete_node(int data){
+  Node* z = search(root,data);
+  if(z==&NIL)
+    return;
 
+  Node* y = z;
+  Color y_original_color = y->color;
 
+  Node* x;
+  if(z->left == &NIL){
+    x = z->right;
+    transplant(z, z->right);
+  }
+  else if(z->right == &NIL){
+    x = z->left;
+    transplant(z, z->left);
+  }
+  // parent node has two children
+  else {
+    y = minimum(z->right);
+    y_original_color = y->color;
+    x = y->right;
+    // if y's parent is the target node, update x's parent to y
+    if (y->parent == z)
+      x->parent = y;
+    else{
+      transplant(y,y->right);
+      y->right = z->right;
+      y->right->parent = y;
+    }
 
+    transplant(z, y);
+    y->left = z->left;
+    y->left->parent = y;
+    y->color = z->color;
+  }
 
+  if(y_original_color == Color::BLACK)
+    fix_delete(x);
+}
 
+void RedBlackTree::fix_delete(Node* x){
+  // uncle node
+  Node* w;
+  while(x != root && x->color == Color::BLACK){
+    // replaced node is left node
+    if(x == x->parent->left){
+      w = x->parent->right;
+      // if uncle is RED
+      if(w->color == Color::RED){
+        w->color = Color::BLACK;
+        x->parent->color = Color::RED;
+        rotate_left(x->parent);
+        // reasignment of uncle after the rotation
+        w = x->parent->right;
+      }
+      // if the uncle and its children are all black
+      if(w->left->color == Color::BLACK && w->right->color == Color::RED){
+        w->color = Color::RED;
+        x = x->parent;
+      }
+      // uncle has one red child
+      else{
+        // left is the red child
+        if(w->right->color == Color::BLACK){
+          w->left->color = Color::BLACK;
+          w->color = Color::RED;
+          rotate_right(w);
+          w = x->parent->right;
+        }
+        w->color = x->parent->color;
+        x->parent->color = Color::BLACK;
+        w->right->color = Color::BLACK;
+        rotate_left(x->parent);
+        x = root;
+      }
+    }
+    else {
+      w = x->parent->left;
+
+      if(w->color == Color::RED){
+        w->color = Color::BLACK;
+        x->parent->color = Color::RED;
+        rotate_right(x->parent);
+        w = x->parent->left;
+      }
+
+      if(w->right->color == Color::BLACK && w->left->color == Color::BLACK){
+        w->color = Color::RED;
+        x = x->parent;
+      }
+      else{
+        // right child is red
+        if(w->left->color == Color::BLACK){
+          w->right->color = Color::BLACK;
+          w->color = Color::RED;
+          rotate_left(w);
+          w = x->parent->left;
+        }
+        w->color = x->parent->color;
+        x->parent->color = Color::BLACK;
+        x->left->color = Color::BLACK;
+        rotate_right(x->parent);
+        x = root;
+      }
+    }
+  }
+  x->color = Color::BLACK;
+}

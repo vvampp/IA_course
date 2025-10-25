@@ -9,14 +9,16 @@ private:
   void rotate_left(Node* x);
   void rotate_right(Node* y);
   void fix_insert(Node* z);
+  Node* search(Node*, int);
+  Node* minimum(Node*);
+  void transplant(Node*, Node*);
+  void fix_delete(Node*);
 
 public:
   RedBlackTree();
   Node* get_root();
-  void insert(int data);
-  Node* search(Node* node, int key);
-  Node* minimum(Node* node);
-  void transplant(Node* u, Node* v);
+  void insert(int);
+  void delete_node(int);
 };
 
 
