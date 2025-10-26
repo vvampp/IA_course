@@ -1,5 +1,7 @@
 #include "red-black_tree.hpp"
 #include "node.hpp"
+#include <iostream>
+#include <string>
 
 RedBlackTree::RedBlackTree() : NIL(Node()), root(&NIL) {}
 
@@ -281,3 +283,18 @@ void RedBlackTree::fix_delete(Node* x){
   }
   x->color = Color::BLACK;
 }
+
+
+void RedBlackTree::preorder(Node* node){
+  if(node == &NIL){
+    return;
+  }
+
+  std::string node_color;
+  node->color == Color::BLACK ? node_color = "BLACK" : node_color = "RED";
+
+  std::cout<< node->data << " : " << node_color << std::endl;
+  preorder(node->left);
+  preorder(node->right);
+}
+

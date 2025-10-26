@@ -19,6 +19,7 @@ public:
   Node* get_root();
   void insert(int);
   void delete_node(int);
+  void preorder(Node*);
 };
 
 

@@ -9,7 +9,5 @@ int main(){
   tree.insert(4);
   tree.insert(5);
   tree.delete_node(1);
-  std::cout << "Insertion process finished" << std::endl;
-  Node * root = tree.get_root();
-  std::cout << "Value at tree's root: " << root->data << std::endl;
+  tree.preorder(tree.get_root());
 }
