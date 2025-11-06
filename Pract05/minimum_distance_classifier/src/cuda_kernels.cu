@@ -41,6 +41,53 @@ __global__ void compute_distances_kernel(
   distances[sample_idx * n_classes + class_idx] = dist_sq;
 }
 
+
+__global__ void compute_distances_kernel_shared(
+    const float* samples,
+    const float* centroids,
+    float* distances,
+    int n_samples,
+    int n_features,
+    int n_classes)
+{
+  // shared mem to chache centroids
+  extern __shared__ float shared_centroids[];
+
+  int sample_idx = blockIdx.x * blockDim.x + threadIdx.x;
+  int class_idx = blockIdx.y * blockDim.y + threadIdx.y;
+
+  // load centroids into shared mem cooperatively
+  // each thread loads one element
+  int total_centroid_elements = n_features * n_classes;
+  int thread_id = threadIdx.y * blockDim.x + threadIdx.x;
+  int threads_per_block = blockDim.x * blockDim.y;
+
+  for(int i = thread_id; i < total_centroid_elements; i+=threads_per_block){
+    shared_centroids[i] = centroids[i];
+  }
+
+  __syncthreads();
+
+  if(sample_idx >= n_samples || class_idx >= n_classes){
+    return;
+  }
+
+  // calculate distance with shared memory
+  float dist_sq = 0.0f;
+
+  const float* sample = samples + sample_idx * n_features;
+  const float* centroid = centroids + class_idx * n_features;
+
+  #pragma unroll 8
+  for(int f = 0; f < n_features; ++f){
+    float diff = sample[f] - centroid[f];
+    dist_sq = fmaf(diff,diff,dist_sq);
+  }
+
+  distances[sample_idx * n_classes + class_idx] = dist_sq;
+}
+
+
 }
 }
 
