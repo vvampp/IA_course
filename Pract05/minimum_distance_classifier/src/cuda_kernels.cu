@@ -285,6 +285,93 @@ std::string get_cuda_device_info(){
     
     return config;
 } 
+
+
+void cuda_classify(
+    const float* h_samples,
+    const float* d_centroids,
+    int* h_predictions,
+    int n_samples,
+    int n_features,
+    int n_classes)
+{
+  // allocate device memory
+  float* d_samples = nullptr;
+  float* d_distances = nullptr;
+  int* d_predictions = nullptr;
+
+  size_t samples_size = n_samples * n_features * sizeof(float);
+  size_t distance_size = n_samples * n_classes * sizeof(float);
+  size_t predictions_size = n_samples * sizeof(int);
+
+  cudaMalloc(&d_samples, samples_size);
+  cudaMalloc(&d_distances, distance_size);
+  cudaMalloc(&d_predictions, predictions_size);
+
+  cudaMemcpy(d_samples, h_samples, samples_size, cudaMemcpyHostToDevice);
+
+  // get optimal configuration for the kernel given the function arguments
+  KernelConfig config = get_optimal_kernel_config(n_samples, n_classes, n_features);
+
+  size_t centroids_size = n_classes * n_features * sizeof(float);
+
+  if(centroids_size <= MAX_SHARED_MEMORY_BYTES && n_classes <= MAX_CLASSES_SHARED){
+    // use kernel with shared memory
+    compute_distances_kernel_shared<<<config.grid_dim, config.block_dim, config.shared_memory_size>>>(
+        d_samples, d_centroids, d_distances,
+        n_samples, n_features, n_classes
+        );
+  } else if (n_samples > 10000 && n_classes < 20){
+    // limited amount of classes, fused kernel
+    int threads_per_block = 256;
+    int blocks = (n_samples + threads_per_block - 1) / threads_per_block;
+
+    classify_fused_kernel<<<blocks, threads_per_block>>>(
+        d_samples, d_centroids, d_predictions,
+        n_samples, n_features, n_classes
+        );
+
+    cudaMemcpy(h_predictions, d_predictions, predictions_size, cudaMemcpyDeviceToHost);
+
+    cudaFree(d_samples);
+    cudaFree(d_distances);
+    cudaFree(d_predictions);
+    return;
+
+  } else {
+    // standard kernel without shared memory
+    compute_distances_kernel<<<config.grid_dim, config.block_dim>>>(
+        d_samples, d_centroids, d_distances,
+        n_samples, n_features, n_classes
+        );
+  }
+
+  // launch minimin search kernel
+  int threads_per_block = std::min(256,n_samples);
+  int blocks = (n_samples + threads_per_block -1)/ threads_per_block;
+
+  if(n_classes > 64){
+    // parallel reduction if too much classes
+    dim3 block_dim(threads_per_block, 8, 1);
+    find_minimum_kernel_parallell<<<blocks,block_dim>>>(
+        d_distances, d_predictions, n_samples, n_classes
+        );
+  } else {
+    // secuential reduction for small amout of classes
+    find_minimum_kernel<<<blocks,threads_per_block>>>(
+        d_distances, d_predictions, n_samples, n_classes
+        );
+  }
+
+  cudaMemcpy(h_predictions, d_predictions, predictions_size, cudaMemcpyDeviceToHost);
+
+  cudaFree(d_samples);
+  cudaFree(d_predictions);
+  cudaFree(d_distances);
+}
+
+
+
   
 }
 }
