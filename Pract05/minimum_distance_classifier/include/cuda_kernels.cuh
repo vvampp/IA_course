@@ -16,7 +16,7 @@ constexpr int MAX_FEATURES_SHARED = 512;
 constexpr int MAX_CLASSES_SHARED = 128;
 
 
-struct kernelConfig {
+struct KernelConfig {
   dim3 grid_dim;
   dim3 block_dim;
   size_t shared_memory_size;

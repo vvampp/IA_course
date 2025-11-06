@@ -76,7 +76,7 @@ __global__ void compute_distances_kernel_shared(
   float dist_sq = 0.0f;
 
   const float* sample = samples + sample_idx * n_features;
-  const float* centroid = centroids + class_idx * n_features;
+  const float* centroid = shared_centroids + class_idx * n_features;
 
   #pragma unroll 8
   for(int f = 0; f < n_features; ++f){
@@ -162,6 +162,7 @@ __global__ void find_minimum_kernel_parallell(
 }
 
 
+// ditances in registries, minima without writting distances, prediction write on one function
 __global__ void classify_fused_kernel(
     const float* samples,
     const float* centroids,
@@ -248,7 +249,42 @@ std::string get_cuda_device_info(){
 }
   
   
-  
+ KernelConfig get_optimal_kernel_config(int n_samples, int n_classes, int n_features) {
+    KernelConfig config;
+    
+    // Get device properties
+    cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, 0);
+    
+    // Use shared memory?
+    size_t centroids_size = n_classes * n_features * sizeof(float);
+    bool use_shared = (centroids_size <= MAX_SHARED_MEMORY_BYTES);
+    
+    if (use_shared) {
+        config.shared_memory_size = centroids_size;
+    } else {
+        config.shared_memory_size = 0;
+    }
+    
+    // configure dimentions
+    int block_x = std::min(16, prop.maxThreadsDim[0]);
+    int block_y = std::min(16, prop.maxThreadsDim[1]);
+    
+    // adjust if n_classes is small
+    if (n_classes < block_y) {
+        block_y = n_classes;
+    }
+    
+    config.block_dim = dim3(block_x, block_y, 1);
+    
+    // Grid dim config
+    int grid_x = (n_samples + block_x - 1) / block_x;
+    int grid_y = (n_classes + block_y - 1) / block_y;
+    
+    config.grid_dim = dim3(grid_x, grid_y, 1);
+    
+    return config;
+} 
   
 }
 }
