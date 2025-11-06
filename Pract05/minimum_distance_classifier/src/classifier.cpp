@@ -170,5 +170,33 @@ int MinimumDistanceClassifier::get_max_class(const std::vector<int>& y) const{
   return *std::max_element(y.begin(), y.end());
 }
 
+bool MinimumDistanceClassifier::initialize_cuda(){
+#ifdef USE_CUDA 
+  return check_cuda_available();
+#else
+  return false;
+#endif
+}
+
+void MinimumDistanceClassifier::allocate_cuda_memory(){
+#ifdef USE_CUDA
+  free_cuda_memory();
+  centroids_size_ = n_classes_ * n_features_ * sizeof(float);
+  cuda_malloc(&d_centroids_, centroids_size_);
+#endif
+}
+
+void transfer_centroids_to_device(){
+#ifdef USE_CUDA
+  std::vector<float> centroids_flat(n_classes_ * n_features_);
+  for(int c = 0; c < n_classes_; ++c){
+    for(int f = 0; f < n_features_; ++f ){
+      centroids_flat[c * n_features + f] = centroids_[c][f];
+    }
+  }
+  cuda_memcpy_hots_to_device(d_centroids_, centroids_flat.data(), centroids_size_)
+#endif
+}
+
 
 }
