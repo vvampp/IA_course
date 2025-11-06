@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdexcept>
 #ifdef USE_CUDA
 
 #include <cuda_runtime.h>
@@ -14,6 +15,28 @@ constexpr int MAX_THREADS_PER_BLOCK = 256;
 constexpr int MAX_SHARED_MEMORY_BYTES = 48 * 1024; // 48KB 
 constexpr int MAX_FEATURES_SHARED = 512;
 constexpr int MAX_CLASSES_SHARED = 128;
+
+// error handling macros
+
+#define CUDA_CHECK(call) \
+  do { \
+    cudaError_t error = call; \
+    if(error != cudaSuccess){ \
+      std::cerr << "CUDA error at " << __FILE__ << ":" << __LINE__ \
+                << " - " << cudaGetErrorString(error) << std::endl; \
+      throw std::runtime_error(std::string("CUDA error: ") + cudaGetErrorString(error));)\
+    }\
+  } while(0)
+
+#define CUDA_KERNEL_CHECK() \
+  do { \
+    cudaError_t error = cudaGetLastError(); \
+    ir(error != cudaSuccess){ \
+      std::cerr << "CUDA kernel launch error at " << __FILE__ << ":" << __LINE__ \
+                << " - " << cudaGetErrorString(error) << std::endl; \
+    } \
+    CUDA_CHECK(cudaDeviceSynchronize());\
+  } while(0)
 
 
 struct KernelConfig {
