@@ -34,6 +34,10 @@ MinimumDistanceClassifier::MinimumDistanceClassifier(bool use_cuda)
   #endif
 }
 
+MinimumDistanceClassifier::~MinimumDistanceClassifier(){
+  free_cuda_memory();
+}
+
 
 }
 
