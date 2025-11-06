@@ -186,6 +186,16 @@ void MinimumDistanceClassifier::allocate_cuda_memory(){
 #endif
 }
 
+void free_cuda_memory(){
+#ifdef USE_CUDA
+  if(d_centroids_ != nullptr){
+    cuda_free(d_centroids_);
+    d_centroids_ = nullptr;
+    centroids_size_ = 0;
+  }
+#endif
+}
+
 void transfer_centroids_to_device(){
 #ifdef USE_CUDA
   std::vector<float> centroids_flat(n_classes_ * n_features_);
@@ -197,6 +207,5 @@ void transfer_centroids_to_device(){
   cuda_memcpy_hots_to_device(d_centroids_, centroids_flat.data(), centroids_size_)
 #endif
 }
-
 
 }
