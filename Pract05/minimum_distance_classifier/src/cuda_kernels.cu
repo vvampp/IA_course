@@ -32,7 +32,7 @@ __global__ void compute_distances_kernel(
   const float* centroid = centroids + class_idx * n_features;
 
   // acumulate square diferences
-  #pragma unroll 8
+  #pragma unroll
   for(int f = 0; f < n_features; ++f){
     float diff = sample[f] - centroid[f];
     dist_sq = fmaf(diff, diff, dist_sq); // Fused multiply - add

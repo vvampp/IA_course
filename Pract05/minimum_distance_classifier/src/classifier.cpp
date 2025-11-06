@@ -26,8 +26,8 @@ MinimumDistanceClassifier::MinimumDistanceClassifier(bool use_cuda)
 {
   #ifdef USE_CUDA
     if(use_cuda_){
-      cuda_availabe_ = initialize_cuda();
-      if(!cuda_availabe_){
+      cuda_available_ = initialize_cuda();
+      if(!cuda_available_){
         std::cerr << "CUDA requested but not available. Falling back to CPU.\n";
       }
     }
