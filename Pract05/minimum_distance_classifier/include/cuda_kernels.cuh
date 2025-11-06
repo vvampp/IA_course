@@ -68,8 +68,12 @@ __global__ void classify_fused_kernel(
 
 // wrappers
 bool check_cuda_available();
+
 std::string get_cuda_device_info();
-KernelConfig get_optimal_kernel_config(int n_samples, int n_clases, int n_features);
+
+KernelConfig get_optimal_kernel_config(int n_samples,
+    int n_clases,
+    int n_features);
 
 void cuda_classify(
     const float* h_samples,
@@ -93,11 +97,26 @@ void cuda_classify_streams(
 
 // memory management 
 void cuda_malloc(float** d_ptr, size_t size);
+
 void cuda_free(void* d_ptr);
-void cuda_memcpy_host_to_device(float* d_dst, const float* h_src, size_t size);
-void cuda_memcpy_device_to_host(float* h_dst, const float* d_src, size_t size);
-void cuda_memcpy_async_htod(float* d_dst, const float* h_src, size_t size, cudaStream_t stream);
-void cuda_memcpy_async_dtoh(float* h_dst, const float* d_src, size_t size, cudaStream_t stream);
+
+void cuda_memcpy_host_to_device(float* d_dst,
+    const float* h_src,
+    size_t size);
+
+void cuda_memcpy_device_to_host(float* h_dst,
+    const float* d_src,
+    size_t size);
+
+void cuda_memcpy_async_htod(float* d_dst,
+    const float* h_src,
+    size_t size,
+    cudaStream_t stream);
+
+void cuda_memcpy_async_dtoh(float* h_dst,
+    const float* d_src,
+    size_t size,
+    cudaStream_t stream);
 
 }
 }
