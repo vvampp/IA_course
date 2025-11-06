@@ -46,6 +46,7 @@ MinimumDistanceClassifier::~MinimumDistanceClassifier(){
 }
 
 
+// movement constructors
 MinimumDistanceClassifier::MinimumDistanceClassifier(
   MinimumDistanceClassifier&& other) noexcept
   : centroids_(std::move(other.centroids_))
@@ -85,6 +86,7 @@ MinimumDistanceClassifier& MinimumDistanceClassifier::operator=(
 }
 
 
+// public methods
 void MinimumDistanceClassifier::fit(
   const std::vector<std::vector<float>>& X,
   const std::vector<int>& y)
@@ -133,8 +135,15 @@ std::vector<int> MinimumDistanceClassifier::predict_batch(
 }
 
 
+std::vector<std::vector<float>> MinimumDistanceClassifier::get_centroids() const {
+  if(!is_fitted_){
+    throw std::runtime_error("Model not fitted. Call fit() first");
+  }
+  return centroids_;
+}
 
 
+// private methods
 void MinimumDistanceClassifier::validate_data(
   const std::vector<std::vector<float>>& X,
   const std::vector<int>& y,
@@ -309,13 +318,6 @@ std::vector<int> MinimumDistanceClassifier::predict_cuda(
 #endif
 }
 
-int MinimumDistanceClassifier::get_max_class(const std::vector<int>& y) const{
-  if(y.empty()){
-    return 0;
-  }
-  return *std::max_element(y.begin(), y.end());
-}
-
 
 bool MinimumDistanceClassifier::initialize_cuda(){
 #ifdef USE_CUDA 
@@ -356,6 +358,15 @@ void transfer_centroids_to_device(){
   }
   cuda_memcpy_hots_to_device(d_centroids_, centroids_flat.data(), centroids_size_)
 #endif
+}
+
+
+// utilities
+int MinimumDistanceClassifier::get_max_class(const std::vector<int>& y) const{
+  if(y.empty()){
+    return 0;
+  }
+  return *std::max_element(y.begin(), y.end());
 }
 
 
