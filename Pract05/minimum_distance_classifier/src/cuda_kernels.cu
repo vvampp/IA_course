@@ -371,6 +371,109 @@ void cuda_classify(
 }
 
 
+void cuda_classify_streams(
+    const float* h_samples,
+    const float* d_centroids,
+    int* h_predictions,
+    int n_samples,
+    int n_features,
+    int n_classes,
+    int n_streams)
+{
+  int chunk_size = (n_samples + n_streams - 1) / n_streams;
+
+  std::vector<cudaStream_t> streams(n_streams);
+  for(int i = 0; i < n_streams; ++i){
+    cudaStreamCreate(&streams[i]);
+  }
+
+  // allocte pinned memory
+  // useful for async transfers
+  float* h_samples_pinned;
+  int* h_predictions_pinned;
+  cudaMallocHost(&h_samples_pinned, n_samples * n_features * sizeof(float));
+  cudaMallocHost(&h_predictions_pinned, n_samples * sizeof(int));
+
+  // copy to pinned memory
+  std::copy(h_samples, h_samples + n_samples * n_features, h_samples_pinned);
+
+  // parallel chunk processing
+  for(int i = 0 ; i < n_streams; ++i){
+    int offset = i * chunk_size;
+    int current_chunk_size = std::min(chunk_size, n_samples - offset);
+    
+    if(current_chunk_size <= 0){
+      break;
+    }
+
+    float* d_samples_chunk;
+    int* d_predictions_chunk;
+
+    size_t samples_chunk_size = current_chunk_size * n_features * sizeof(float);
+    size_t predictions_chunk_size = current_chunk_size * sizeof(int);
+
+    cudaMalloc(&d_samples_chunk,samples_chunk_size);
+    cudaMalloc(&d_predictions_chunk, predictions_chunk_size);
+
+    // async transfer H2D
+    cuda_memcpy_async_htod(
+        d_samples_chunk,
+        h_samples_pinned + offset * n_features,
+        samples_chunk_size,
+        streams[i]
+        );
+
+    int threads = 256;
+    int blocks = (current_chunk_size + threads - 1) / threads;
+
+    classify_fused_kernel<<<blocks, threads, 0, streams[i]>>>(
+        d_samples_chunk, d_centroids, d_predictions_chunk,
+        current_chunk_size, n_features, n_classes
+        );
+
+    // async transfer D2H
+    cuda_memcpy_async_dtoh(
+        h_predictions_pinned + offset,
+        d_predictions_chunk,
+        predictions_chunk_size,
+        streams[i]
+        );
+    // free mem after sync
+  }
+
+  // sync streams
+  for(int i = 0; i < n_streams; ++i){
+    cudaStreamSynchronize(streams[i]);
+    cudaStreamDestroy(streams[i]);
+  }
+
+  // copy final predictions
+  std::copy(h_predictions_pinned,
+      h_predictions_pinned + n_samples,
+      h_predictions);
+
+}
+
+// memory management functions
+
+void cuda_memcpy_async_htod(float* d_dst,
+    const float* h_src,
+    size_t size,
+    cudaStream_t stream)
+{
+  cudaMemcpyAsync(d_dst, h_src, size, cudaMemcpyHostToDevice, stream);
+}
+
+void cuda_memcpy_async_dtoh(float* h_dst,
+    const float* d_src,
+    size_t size,
+    cudaStream_t stream)
+{
+  cudaMemcpyAsync(h_dst, d_src, size, cudaMemcpyDeviceToHost, stream);
+}
+
+
+
 
   
 }
