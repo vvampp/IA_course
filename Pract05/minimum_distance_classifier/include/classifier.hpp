@@ -2,6 +2,10 @@
 #define CLASSIFIER_HPP
 
 #include <vector>
+#include <string>
+#include <memory>
+#include <stdexcept>
+
 namespace mdc {
 
 class MinimumDistanceClassifier {
@@ -36,7 +40,7 @@ private:
   int n_classes_;
   int n_features_;
   bool is_fitted_;
-  int use_cuda_;
+  bool use_cuda_;
   int cuda_available_;
 
   float* d_centroids_; 
