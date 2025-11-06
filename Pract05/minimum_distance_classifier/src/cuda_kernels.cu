@@ -1,7 +1,7 @@
-#ifndef USE_CUDA
+#ifdef USE_CUDA
 
 // temporal filepath for development
-#include "../include/cuda_kernels.cuh"
+#include "cuda_kernels.cuh"
 #include <cfloat>
 #include <vector>
 #include <algorithm>
@@ -217,7 +217,7 @@ bool check_cuda_available(){
     cudaDeviceProp prop;
     cudaGetDeviceProperties(&prop, i);
 
-    if(prop.major >= 3 && prop.minor >= 5){
+    if(prop.major >= 3 || (prop.major == 3 && prop.minor >= 5)){
       return true;
     }
   }
@@ -439,7 +439,7 @@ void cuda_classify_streams(
         );
 
     // async transfer D2H
-    cuda_memcpy_async_dtoh(
+    cuda_memcpy_async_dtoh_int(
         h_predictions_pinned + offset,
         d_predictions_chunk,
         predictions_chunk_size,
@@ -495,6 +495,22 @@ void cuda_memcpy_async_htod(float* d_dst,
     cudaStream_t stream)
 {
   CUDA_CHECK(cudaMemcpyAsync(d_dst, h_src, size, cudaMemcpyHostToDevice, stream));
+}
+
+void cuda_memcpy_async_htod_int(int* d_dst,
+    const int* h_src,
+    size_t size, 
+   cudaStream_t stream)
+{
+    CUDA_CHECK(cudaMemcpyAsync(d_dst, h_src, size, cudaMemcpyHostToDevice, stream));
+}
+
+void cuda_memcpy_async_dtoh_int(int* h_dst,
+    const int* d_src,
+    size_t size,
+    cudaStream_t stream)
+{
+    CUDA_CHECK(cudaMemcpyAsync(h_dst, d_src, size, cudaMemcpyDeviceToHost, stream));
 }
 
 void cuda_memcpy_async_dtoh(float* h_dst,

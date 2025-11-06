@@ -1,5 +1,4 @@
-// temporal filepath to avoid erorrs on development
-#include "../include/classifier.hpp"
+#include "classifier.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -11,6 +10,7 @@
 
 #ifdef USE_CUDA
 #include "cuda_kernels.cuh"
+using namespace mdc::cuda;
 #endif
 
 namespace mdc {
@@ -299,7 +299,7 @@ std::vector<int> MinimumDistanceClassifier::predict_cuda(
     }
   }
 
-  // call to CUDA wrapper (pending implementation)
+  // call to CUDA wrapper
   std::vector<int> predictions(n_samples);
 
   cuda_classify(
