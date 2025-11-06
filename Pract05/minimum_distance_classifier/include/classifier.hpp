@@ -1,5 +1,4 @@
-#ifndef CLASSIFIER_HPP
-#define CLASSIFIER_HPP
+#pragma once
 
 #include <vector>
 #include <string>
