@@ -505,9 +505,6 @@ void cuda_memcpy_async_dtoh(float* h_dst,
   CUDA_CHECK(cudaMemcpyAsync(h_dst, d_src, size, cudaMemcpyDeviceToHost, stream));
 }
 
-
-
-
   
 }
 }

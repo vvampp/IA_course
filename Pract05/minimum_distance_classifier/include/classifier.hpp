@@ -16,11 +16,11 @@ public:
 
   // prohibit copies ... CUDA good practice regarding pointers
   MinimumDistanceClassifier(const MinimumDistanceClassifier&) = delete;
-  MinimumDistanceClassifier& operator=(const MinimumDistanceClassifier&& other) noexcept;
+  MinimumDistanceClassifier& operator=(const MinimumDistanceClassifier&) = delete;
 
   // movement constructors
   MinimumDistanceClassifier(MinimumDistanceClassifier&& other) noexcept;
-  MinimumDistanceClassifier& operator=(const MinimumDistanceClassifier&) = delete;
+  MinimumDistanceClassifier& operator=(MinimumDistanceClassifier&& other) noexcept;
 
   void fit(const std::vector<std::vector<float>>& X,
            const std::vector<int>& y);
