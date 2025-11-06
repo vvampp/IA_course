@@ -32,7 +32,7 @@ __global__ void compute_distances_kernel(
   const float* centroid = centroids + class_idx * n_features;
 
   // acumulate square diferences
-#pragma unroll 8
+  #pragma unroll 8
   for(int f = 0; f < n_features; ++f){
     float diff = sample[f] - centroid[f];
     dist_sq = fmaf(diff, diff, dist_sq); // Fused multiply - add
@@ -88,6 +88,82 @@ __global__ void compute_distances_kernel_shared(
 }
 
 
+__global__ void find_minimum_kernel(
+    const float* distances,
+    int* predictions,
+    int n_samples,
+    int n_classes)
+{
+  int sample_idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+  if(sample_idx >= n_samples){
+    return;
+  }
+
+  float min_dist = FLT_MAX;
+  int best_class = 0;
+
+  const float* sample_distances = distances + sample_idx * n_classes;
+
+  for(int c = 0; c < n_classes; ++c){
+    float dist = sample_distances[c];
+    if(dist < min_dist){
+      min_dist = dist;
+      best_class = c;
+    }
+  }
+
+  predictions[sample_idx] = best_class;
+}
+
+
+__global__ void find_minimum_kernel_parallell(
+    const float* distances,
+    int* predictions,
+    int n_samples,
+    int n_classes)
+{
+  int sample_idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+  if(sample_idx >= n_samples){
+    return;
+  }
+
+  const float* sample_distances = distances + sample_idx * n_classes;
+
+  // each thread procecess multiple elements using reduction
+  float min_dist = FLT_MAX;
+  int best_class = 0;
+
+  // first pass: find local minima
+  for(int c = 0; c < n_classes; c += blockDim.y){
+    float dist = sample_distances[c];
+    if(dist < min_dist){
+      min_dist = dist;
+      best_class = c;
+    }
+  }
+
+  // warp-level reduction using shuffle
+  #pragma unroll
+  for(int offset = 16; offset > 0; offset >>=1){
+    float other_dist = __shfl_down_sync(0xffffffff, min_dist, offset);
+    int other_class = __shfl_down_sync(0xffffffff, best_class, offset);
+
+    if (other_dist < min_dist){
+      min_dist = other_dist;
+      best_class = other_class;
+    }
+  }
+  // first thread and each warp writes the result
+  if(threadIdx.y == 0){
+    predictions[sample_idx] = best_class;
+  }
+}
+  
+  
+  
+  
 }
 }
 
