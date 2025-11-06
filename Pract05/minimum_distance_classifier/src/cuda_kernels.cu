@@ -160,6 +160,46 @@ __global__ void find_minimum_kernel_parallell(
     predictions[sample_idx] = best_class;
   }
 }
+
+
+__global__ void classify_fused_kernel(
+    const float* samples,
+    const float* centroids,
+    int* predictions, 
+    int n_samples,
+    int n_features,
+    int n_classes)
+{
+  int sample_idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+  if(sample_idx >= n_samples){
+    return;
+  }
+
+  const float* sample = samples + sample_idx * n_features;
+
+  float min_dist = FLT_MAX;
+  int best_class = 0;
+
+  // calculate distance to each centroid and keep minima
+  for(int c = 0; c < n_classes; ++c){
+    const float* centroid = centroids + c * n_features;
+    float dist_sq = 0.0f;
+    #pragma unroll 8
+    for(int f = 0; f < n_features; ++f){
+      float diff = sample[f] - centroid[f];
+      dist_sq = fmaf(diff, diff, dist_sq);
+    }
+
+    if(dist_sq < min_dist){
+      min_dist = dist_sq;
+      best_class = c;
+    }
+  }
+
+  predictions[sample_idx] = best_class;
+  
+}
   
   
   
