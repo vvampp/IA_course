@@ -28,7 +28,7 @@ MinimumDistanceClassifier::MinimumDistanceClassifier(bool use_cuda)
     if(use_cuda_){
       cuda_availabe_ = initialize_cuda();
       if(!cuda_availabe_){
-        std::cer << "CUDA requested but not available. Falling back to CPU.\n";
+        std::cerr << "CUDA requested but not available. Falling back to CPU.\n";
       }
     }
   #else
@@ -184,7 +184,7 @@ void MinimumDistanceClassifier::validate_data(
 
     if(X.size() != y.size()){
       std::ostringstream oss;
-      oss << "X and y must have the same number of samples."
+      oss << "X and y must have the same number of samples. "
         << "X has " << X.size() << " samples, and y has " << y.size(); 
       throw std::invalid_argument(oss.str());
     }
@@ -193,7 +193,7 @@ void MinimumDistanceClassifier::validate_data(
     for(size_t i = 0; i < y.size(); ++i){
       if(y[i] < 0){
         std::ostringstream oss;
-        oss << "Label at index " << i << "is negative (" << y[i]
+        oss << "Label at index " << i << " is negative (" << y[i]
           << "). Labels must be all non-negative integers";
         throw std::invalid_argument(oss.str());
       }
@@ -291,7 +291,7 @@ std::vector<int> MinimumDistanceClassifier::predict_cuda(
 #ifdef USE_CUDA
   // X to contigous
   int n_samples = static_cast<int>(X.size());
-  std::vector<float> X_flat(n_samples * n_features);
+  std::vector<float> X_flat(n_samples * n_features_);
 
   for(int i = 0; i < n_samples; ++i){
     for(int j = 0; j < n_features_; ++j){
@@ -337,7 +337,7 @@ void MinimumDistanceClassifier::allocate_cuda_memory(){
 }
 
 
-void free_cuda_memory(){
+void MinimumDistanceClassifier::free_cuda_memory(){
 #ifdef USE_CUDA
   if(d_centroids_ != nullptr){
     cuda_free(d_centroids_);
@@ -348,15 +348,15 @@ void free_cuda_memory(){
 }
 
 
-void transfer_centroids_to_device(){
+void MinimumDistanceClassifier::transfer_centroids_to_device(){
 #ifdef USE_CUDA
   std::vector<float> centroids_flat(n_classes_ * n_features_);
   for(int c = 0; c < n_classes_; ++c){
     for(int f = 0; f < n_features_; ++f ){
-      centroids_flat[c * n_features + f] = centroids_[c][f];
+      centroids_flat[c * n_features_ + f] = centroids_[c][f];
     }
   }
-  cuda_memcpy_hots_to_device(d_centroids_, centroids_flat.data(), centroids_size_)
+  cuda_memcpy_host_to_device(d_centroids_, centroids_flat.data(), centroids_size_);
 #endif
 }
 
