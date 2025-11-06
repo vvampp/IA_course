@@ -1,4 +1,3 @@
-#include <__clang_cuda_builtin_vars.h>
 #ifndef USE_CUDA
 
 // temporal filepath for development
@@ -6,6 +5,7 @@
 #include <cfloat>
 #include <vector>
 #include <algorithm>
+#include <string>
 
 namespace mdc{
 namespace cuda{
@@ -199,6 +199,52 @@ __global__ void classify_fused_kernel(
 
   predictions[sample_idx] = best_class;
   
+}
+
+
+// host functions
+
+bool check_cuda_available(){
+  int device_count = 0;
+  cudaError_t error = cudaGetDeviceCount(&device_count);
+
+  if(error != cudaSuccess || device_count ==0){
+    return false;
+  }
+
+  for(int i = 0 ; i < device_count; ++i){
+    cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, i);
+
+    if(prop.major >= 3 && prop.minor >= 5){
+      return true;
+    }
+  }
+
+  return false;
+}
+
+std::string get_cuda_device_info(){
+    int device_count = 0;
+    cudaGetDeviceCount(&device_count);
+    
+    std::string info = "CUDA Devices: " + std::to_string(device_count) + "\n";
+    
+    for (int i = 0; i < device_count; ++i) {
+        cudaDeviceProp prop;
+        cudaGetDeviceProperties(&prop, i);
+        
+        info += "Device " + std::to_string(i) + ": " + prop.name + "\n";
+        info += "  Compute Capability: " + std::to_string(prop.major) + "." + 
+                std::to_string(prop.minor) + "\n";
+        info += "  Total Memory: " + 
+                std::to_string(prop.totalGlobalMem / (1024*1024)) + " MB\n";
+        info += "  Multiprocessors: " + std::to_string(prop.multiProcessorCount) + "\n";
+        info += "  Max Threads per Block: " + 
+                std::to_string(prop.maxThreadsPerBlock) + "\n";
+    }
+    
+    return info;
 }
   
   
