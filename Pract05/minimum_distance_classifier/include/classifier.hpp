@@ -19,6 +19,10 @@ public:
   MinimumDistanceClassifier(const MinimumDistanceClassifier&) = delete;
   MinimumDistanceClassifier& operator=(const MinimumDistanceClassifier&& other) noexcept;
 
+  // movement constructors
+  MinimumDistanceClassifier(MinimumDistanceClassifier&& other) noexcept;
+  MinimumDistanceClassifier& operator=(const MinimumDistanceClassifier&) = delete;
+
   void fit(const std::vector<std::vector<float>>& X,
            const std::vector<int>& y);
   std::vector<int> predict(const std::vector<std::vector<float>>& X) const;

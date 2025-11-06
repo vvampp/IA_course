@@ -2,10 +2,12 @@
 #include "../include/classifier.hpp"
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <iostream>
 #include <limits>
 #include <sstream>
 #include <stdexcept>
+#include <numeric>
 
 #ifdef USE_CUDA
 #include "cuda_kernels.cuh"
@@ -13,6 +15,7 @@
 
 namespace mdc {
 
+// constructor
 MinimumDistanceClassifier::MinimumDistanceClassifier(bool use_cuda)
   : n_classes_(0)
   , n_features_(0)
@@ -36,8 +39,49 @@ MinimumDistanceClassifier::MinimumDistanceClassifier(bool use_cuda)
   #endif
 }
 
+
+// destructor
 MinimumDistanceClassifier::~MinimumDistanceClassifier(){
   free_cuda_memory();
+}
+
+
+MinimumDistanceClassifier::MinimumDistanceClassifier(
+  MinimumDistanceClassifier&& other) noexcept
+  : centroids_(std::move(other.centroids_))
+  , n_classes_(other.n_classes_)
+  , n_features_(other.n_features_)
+  , is_fitted_(other.is_fitted_)
+  , use_cuda_(other.use_cuda_)
+  , cuda_available_(other.cuda_available_)
+  , d_centroids_(other.d_centroids_)
+  , centroids_size_(other.centroids_size_)
+{
+  other.d_centroids_ = nullptr;
+  other.centroids_size_ = 0;
+  other.is_fitted_ = false;
+}
+
+MinimumDistanceClassifier& MinimumDistanceClassifier::operator=(
+  MinimumDistanceClassifier&& other) noexcept
+{
+  if(this != &other){
+    free_cuda_memory();
+
+    centroids_= std::move(other.centroids_);
+    n_classes_ = other.n_classes_;
+    n_features_ = other.n_features_;
+    is_fitted_ = other.is_fitted_;
+    use_cuda_ = other.use_cuda_;
+    cuda_available_ = other.cuda_available_;
+    d_centroids_ = other.d_centroids_;
+    centroids_size_ = other.centroids_size_;
+
+    other.d_centroids_ = nullptr;
+    other.centroids_size_ = 0;
+    other.is_fitted_ = false;
+  }
+  return *this;
 }
 
 
