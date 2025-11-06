@@ -20,7 +20,7 @@ public:
   MinimumDistanceClassifier& operator=(const MinimumDistanceClassifier&& other) noexcept;
 
   void fit(const std::vector<std::vector<float>>& X,
-           const std::vector<int> y);
+           const std::vector<int>& y);
   std::vector<int> predict(const std::vector<std::vector<float>>& X) const;
   std::vector<int> predict_batch(const std::vector<std::vector<float>>& X) const;
 
