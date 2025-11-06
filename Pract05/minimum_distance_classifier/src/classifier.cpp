@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 
@@ -56,7 +57,73 @@ void MinimumDistanceClassifier::fit(
     transfer_centroids_to_device();
   }
 
+  is_fitted_ = true;
+
 }
+
+
+std::vector<int> MinimumDistanceClassifier::predict(
+  const std::vector<std::vector<float>>& X) const
+{
+  if (!is_fitted_){
+    throw std::runtime_error("Model not fitted. Call fit() before predict()");
+  }
+
+  validate_data(X);
+  if (X.empty()){
+    return std::vector<int>();
+  }
+
+  if (use_cuda_ && cuda_available_){
+    return predict_cuda(X);
+  } else {
+    return predict_cpu(X);
+  }
+}
+
+
+std::vector<int> MinimumDistanceClassifier::predict_batch(
+  const std::vector<std::vector<float>>& X) const
+{
+  return predict(X);
+}
+
+
+std::vector<int> MinimumDistanceClassifier::predict_cpu(
+  const std::vector<std::vector<float>>& X) const
+{
+  std::vector<int> predictions(X.size());
+
+  for(size_t i = 0; i < X.size(); ++i){
+    float min_distance = std::numeric_limits<float>::max();
+    int best_class = 0;
+
+    for(int c = 0; c < n_classes_ ; ++c){
+      float dist = euclidean_distance_squared(X[i], centroids_[c]);
+      if(dist < min_distance){
+        min_distance = dist;
+        best_class = c;
+      }
+    }
+    predictions[i] = best_class;
+  }
+
+  return predictions;
+}
+
+float MinimumDistanceClassifier::euclidean_distance_squared(
+  const std::vector<float>& sample,
+  const std::vector<float>& centroid) const
+{
+  float dist_sq = 0.0f;
+  for(size_t i = 0; i < sample.size(); ++i){
+    float diff = sample[i] - centroid[i];
+    dist_sq += diff * diff;
+  }
+  return dist_sq;
+}
+
+
 
 void MinimumDistanceClassifier::validate_data(
   const std::vector<std::vector<float>>& X,
@@ -126,6 +193,7 @@ void MinimumDistanceClassifier::validate_data(
   }
 }
 
+
 void MinimumDistanceClassifier::compute_centroids(
   const std::vector<std::vector<float>>&X,
   const std::vector<int>& y)
@@ -163,12 +231,14 @@ void MinimumDistanceClassifier::compute_centroids(
 
 }
 
+
 int MinimumDistanceClassifier::get_max_class(const std::vector<int>& y) const{
   if(y.empty()){
     return 0;
   }
   return *std::max_element(y.begin(), y.end());
 }
+
 
 bool MinimumDistanceClassifier::initialize_cuda(){
 #ifdef USE_CUDA 
@@ -178,6 +248,7 @@ bool MinimumDistanceClassifier::initialize_cuda(){
 #endif
 }
 
+
 void MinimumDistanceClassifier::allocate_cuda_memory(){
 #ifdef USE_CUDA
   free_cuda_memory();
@@ -185,6 +256,7 @@ void MinimumDistanceClassifier::allocate_cuda_memory(){
   cuda_malloc(&d_centroids_, centroids_size_);
 #endif
 }
+
 
 void free_cuda_memory(){
 #ifdef USE_CUDA
@@ -195,6 +267,7 @@ void free_cuda_memory(){
   }
 #endif
 }
+
 
 void transfer_centroids_to_device(){
 #ifdef USE_CUDA
@@ -207,5 +280,6 @@ void transfer_centroids_to_device(){
   cuda_memcpy_hots_to_device(d_centroids_, centroids_flat.data(), centroids_size_)
 #endif
 }
+
 
 }
