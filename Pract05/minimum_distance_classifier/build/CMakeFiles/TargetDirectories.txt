@@ -1,3 +1,0 @@
-/home/vvampp/IA_course/Pract05/minimum_distance_classifier/build/CMakeFiles/mdc_lib.dir
-/home/vvampp/IA_course/Pract05/minimum_distance_classifier/build/CMakeFiles/edit_cache.dir
-/home/vvampp/IA_course/Pract05/minimum_distance_classifier/build/CMakeFiles/rebuild_cache.dir
