@@ -304,11 +304,11 @@ void cuda_classify(
   size_t distance_size = n_samples * n_classes * sizeof(float);
   size_t predictions_size = n_samples * sizeof(int);
 
-  cudaMalloc(&d_samples, samples_size);
-  cudaMalloc(&d_distances, distance_size);
-  cudaMalloc(&d_predictions, predictions_size);
+  CUDA_CHECK(cudaMalloc(&d_samples, samples_size));
+  CUDA_CHECK(cudaMalloc(&d_distances, distance_size));
+  CUDA_CHECK(cudaMalloc(&d_predictions, predictions_size));
 
-  cudaMemcpy(d_samples, h_samples, samples_size, cudaMemcpyHostToDevice);
+  CUDA_CHECK(cudaMemcpy(d_samples, h_samples, samples_size, cudaMemcpyHostToDevice));
 
   // get optimal configuration for the kernel given the function arguments
   KernelConfig config = get_optimal_kernel_config(n_samples, n_classes, n_features);
@@ -331,7 +331,9 @@ void cuda_classify(
         n_samples, n_features, n_classes
         );
 
-    cudaMemcpy(h_predictions, d_predictions, predictions_size, cudaMemcpyDeviceToHost);
+    CUDA_KERNEL_CHECK();
+
+    CUDA_CHECK(cudaMemcpy(h_predictions, d_predictions, predictions_size, cudaMemcpyDeviceToHost));
 
     cudaFree(d_samples);
     cudaFree(d_distances);
@@ -345,6 +347,8 @@ void cuda_classify(
         n_samples, n_features, n_classes
         );
   }
+
+  CUDA_KERNEL_CHECK();
 
   // launch minimin search kernel
   int threads_per_block = std::min(256,n_samples);
@@ -363,7 +367,10 @@ void cuda_classify(
         );
   }
 
-  cudaMemcpy(h_predictions, d_predictions, predictions_size, cudaMemcpyDeviceToHost);
+  CUDA_KERNEL_CHECK();
+
+
+  CUDA_CHECK(cudaMemcpy(h_predictions, d_predictions, predictions_size, cudaMemcpyDeviceToHost));
 
   cudaFree(d_samples);
   cudaFree(d_predictions);
@@ -384,15 +391,15 @@ void cuda_classify_streams(
 
   std::vector<cudaStream_t> streams(n_streams);
   for(int i = 0; i < n_streams; ++i){
-    cudaStreamCreate(&streams[i]);
+    CUDA_CHECK(cudaStreamCreate(&streams[i]));
   }
 
   // allocte pinned memory
   // useful for async transfers
   float* h_samples_pinned;
   int* h_predictions_pinned;
-  cudaMallocHost(&h_samples_pinned, n_samples * n_features * sizeof(float));
-  cudaMallocHost(&h_predictions_pinned, n_samples * sizeof(int));
+  CUDA_CHECK(cudaMallocHost(&h_samples_pinned, n_samples * n_features * sizeof(float)));
+  CUDA_CHECK(cudaMallocHost(&h_predictions_pinned, n_samples * sizeof(int)));
 
   // copy to pinned memory
   std::copy(h_samples, h_samples + n_samples * n_features, h_samples_pinned);
@@ -412,8 +419,8 @@ void cuda_classify_streams(
     size_t samples_chunk_size = current_chunk_size * n_features * sizeof(float);
     size_t predictions_chunk_size = current_chunk_size * sizeof(int);
 
-    cudaMalloc(&d_samples_chunk,samples_chunk_size);
-    cudaMalloc(&d_predictions_chunk, predictions_chunk_size);
+    CUDA_CHECK(cudaMalloc(&d_samples_chunk,samples_chunk_size));
+    CUDA_CHECK(cudaMalloc(&d_predictions_chunk, predictions_chunk_size));
 
     // async transfer H2D
     cuda_memcpy_async_htod(
@@ -443,8 +450,8 @@ void cuda_classify_streams(
 
   // sync streams
   for(int i = 0; i < n_streams; ++i){
-    cudaStreamSynchronize(streams[i]);
-    cudaStreamDestroy(streams[i]);
+    CUDA_CHECK(cudaStreamSynchronize(streams[i]));
+    CUDA_CHECK(cudaStreamDestroy(streams[i]));
   }
 
   // copy final predictions
@@ -459,12 +466,12 @@ void cuda_classify_streams(
 // memory management functions
 
 void cuda_malloc(float** d_ptr, size_t size){
-  cudaMalloc(reinterpret_cast<void**>(d_ptr), size);
+  CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(d_ptr), size));
 }
 
 void cuda_free(void* d_ptr){
   if(d_ptr != nullptr){
-    cudaFree(d_ptr);
+    CUDA_CHECK(cudaFree(d_ptr));
   }
 }
 
@@ -472,14 +479,14 @@ void cuda_memcpy_host_to_device(float* d_dst,
     const float* h_src,
     size_t size)
 {
-  cudaMemcpy(d_dst, h_src, size, cudaMemcpyHostToDevice);
+  CUDA_CHECK(cudaMemcpy(d_dst, h_src, size, cudaMemcpyHostToDevice));
 }
 
 void cuda_memcpy_device_to_host(float* h_dst,
     const float* d_src,
     size_t size)
 {
-  cudaMemcpy(h_dst, d_src, size, cudaMemcpyDeviceToHost);
+  CUDA_CHECK(cudaMemcpy(h_dst, d_src, size, cudaMemcpyDeviceToHost));
 }
 
 void cuda_memcpy_async_htod(float* d_dst,
@@ -487,7 +494,7 @@ void cuda_memcpy_async_htod(float* d_dst,
     size_t size,
     cudaStream_t stream)
 {
-  cudaMemcpyAsync(d_dst, h_src, size, cudaMemcpyHostToDevice, stream);
+  CUDA_CHECK(cudaMemcpyAsync(d_dst, h_src, size, cudaMemcpyHostToDevice, stream));
 }
 
 void cuda_memcpy_async_dtoh(float* h_dst,
@@ -495,7 +502,7 @@ void cuda_memcpy_async_dtoh(float* h_dst,
     size_t size,
     cudaStream_t stream)
 {
-  cudaMemcpyAsync(h_dst, d_src, size, cudaMemcpyDeviceToHost, stream);
+  CUDA_CHECK(cudaMemcpyAsync(h_dst, d_src, size, cudaMemcpyDeviceToHost, stream));
 }
 
 
