@@ -231,7 +231,7 @@ void RedBlackTree::fix_delete(Node* x){
         w = x->parent->right;
       }
       // if the uncle and its children are all black
-      if(w->left->color == Color::BLACK && w->right->color == Color::RED){
+      if(w->left->color == Color::BLACK && w->right->color == Color::BLACK){
         w->color = Color::RED;
         x = x->parent;
       }
@@ -275,7 +275,7 @@ void RedBlackTree::fix_delete(Node* x){
         }
         w->color = x->parent->color;
         x->parent->color = Color::BLACK;
-        x->left->color = Color::BLACK;
+        w->left->color = Color::BLACK;
         rotate_right(x->parent);
         x = root;
       }
