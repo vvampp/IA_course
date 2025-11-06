@@ -44,7 +44,7 @@ private:
   int n_features_;
   bool is_fitted_;
   bool use_cuda_;
-  int cuda_available_;
+  bool cuda_available_;
 
   float* d_centroids_; 
   size_t centroids_size_;
@@ -71,5 +71,3 @@ private:
 };
 
 }
-
-#endif
