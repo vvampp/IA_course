@@ -452,9 +452,35 @@ void cuda_classify_streams(
       h_predictions_pinned + n_samples,
       h_predictions);
 
+  cudaFreeHost(h_samples_pinned);
+  cudaFreeHost(h_predictions_pinned);
 }
 
 // memory management functions
+
+void cuda_malloc(float** d_ptr, size_t size){
+  cudaMalloc(reinterpret_cast<void**>(d_ptr), size);
+}
+
+void cuda_free(void* d_ptr){
+  if(d_ptr != nullptr){
+    cudaFree(d_ptr);
+  }
+}
+
+void cuda_memcpy_host_to_device(float* d_dst,
+    const float* h_src,
+    size_t size)
+{
+  cudaMemcpy(d_dst, h_src, size, cudaMemcpyHostToDevice);
+}
+
+void cuda_memcpy_device_to_host(float* h_dst,
+    const float* d_src,
+    size_t size)
+{
+  cudaMemcpy(h_dst, d_src, size, cudaMemcpyDeviceToHost);
+}
 
 void cuda_memcpy_async_htod(float* d_dst,
     const float* h_src,
