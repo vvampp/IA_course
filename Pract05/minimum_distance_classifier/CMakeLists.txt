@@ -4,6 +4,9 @@ project(MinimumDistanceClassifier LANGUAGES CXX CUDA)
 # Find CUDA Toolkit
 find_package(CUDAToolkit REQUIRED)
 
+# --- NUEVO: Encontrar Pybind11 ---
+find_package(pybind11 REQUIRED)
+
 # C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,6 +21,7 @@ option(USE_CUDA "Build with CUDA support" ON)
 # include directories
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${CUDAToolkit_INCLUDE_DIRS})
+# pybind11_include_directories() # pybind11 v2.6+ doesnt need this
 
 # compilation flags C++
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native -Wall -Wextra")
@@ -37,21 +41,36 @@ set(CUDA_SOURCES
   src/cuda_kernels.cu
 )
 
-# Static lib 
+set(BINDING_SOURCES
+  src/python_bindings.cpp
+)
+
+# --- MODIFICADO: Construir el módulo de Python en lugar de la biblioteca estática ---
 if(USE_CUDA)
   add_definitions(-DUSE_CUDA)
     
-  add_library(mdc_lib STATIC ${CPP_SOURCES} ${CUDA_SOURCES})
+  # create python module
+  pybind11_add_module(mdc_core MODULE
+    ${BINDING_SOURCES}
+    ${CPP_SOURCES}
+    ${CUDA_SOURCES}
+  )
     
-  set_target_properties(mdc_lib PROPERTIES
+  # apply CUDA properties to new object mdc_core
+  set_target_properties(mdc_core PROPERTIES
       CUDA_SEPARABLE_COMPILATION ON
       CUDA_RESOLVE_DEVICE_SYMBOLS ON
       POSITION_INDEPENDENT_CODE ON
   )
-    
-  target_link_libraries(mdc_lib PUBLIC CUDA::cudart)
+   
+  # link libraries to new object mdc_core
+  target_link_libraries(mdc_core PUBLIC CUDA::cudart)
 else()
-  add_library(mdc_lib STATIC ${CPP_SOURCES})
+  # Versión sin CUDA
+  pybind11_add_module(mdc_core MODULE
+    ${BINDING_SOURCES}
+    ${CPP_SOURCES}
+  )
 endif()
 
 
