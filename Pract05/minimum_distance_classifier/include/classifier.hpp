@@ -1,73 +1,68 @@
 #pragma once
 
-#include <vector>
-#include <string>
 #include <memory>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace mdc {
 
 class MinimumDistanceClassifier {
 
-public:
+  public:
+    explicit MinimumDistanceClassifier(bool use_cuda = false);
+    ~MinimumDistanceClassifier();
 
-  explicit MinimumDistanceClassifier(bool use_cuda = false);
-  ~MinimumDistanceClassifier();
+    // prohibit copies ... CUDA good practice regarding pointers
+    MinimumDistanceClassifier(const MinimumDistanceClassifier &) = delete;
+    MinimumDistanceClassifier &operator=(const MinimumDistanceClassifier &) = delete;
 
-  // prohibit copies ... CUDA good practice regarding pointers
-  MinimumDistanceClassifier(const MinimumDistanceClassifier&) = delete;
-  MinimumDistanceClassifier& operator=(const MinimumDistanceClassifier&) = delete;
+    // movement constructors
+    MinimumDistanceClassifier(MinimumDistanceClassifier &&other) noexcept;
+    MinimumDistanceClassifier &operator=(MinimumDistanceClassifier &&other) noexcept;
 
-  // movement constructors
-  MinimumDistanceClassifier(MinimumDistanceClassifier&& other) noexcept;
-  MinimumDistanceClassifier& operator=(MinimumDistanceClassifier&& other) noexcept;
+    void fit(const std::vector<std::vector<float>> &X, const std::vector<int> &y);
+    std::vector<int> predict(const std::vector<std::vector<float>> &X) const;
+    std::vector<int> predict_batch(const std::vector<std::vector<float>> &X) const;
 
-  void fit(const std::vector<std::vector<float>>& X,
-           const std::vector<int>& y);
-  std::vector<int> predict(const std::vector<std::vector<float>>& X) const;
-  std::vector<int> predict_batch(const std::vector<std::vector<float>>& X) const;
+    std::vector<std::vector<float>> get_centroids() const;
 
-  std::vector<std::vector<float>> get_centroids() const;
-  
-  // get member attributes
-  int get_n_classes() const { return n_classes_; }
-  int get_n_features() const { return n_features_; }
+    // get member attributes
+    int get_n_classes() const { return n_classes_; }
+    int get_n_features() const { return n_features_; }
 
-  // check for status
-  bool is_using_cuda() const { return use_cuda_ && cuda_available_; }
-  bool is_fitted() const { return is_fitted_; }
+    // check for status
+    bool is_using_cuda() const { return use_cuda_ && cuda_available_; }
+    bool is_fitted() const { return is_fitted_; }
 
-private:
+  private:
+    std::vector<std::vector<float>> centroids_;
+    int n_classes_;
+    int n_features_;
+    bool is_fitted_;
+    bool use_cuda_;
+    bool cuda_available_;
 
-  std::vector<std::vector<float>> centroids_;
-  int n_classes_;
-  int n_features_;
-  bool is_fitted_;
-  bool use_cuda_;
-  bool cuda_available_;
+    float *d_centroids_;
+    size_t centroids_size_;
 
-  float* d_centroids_; 
-  size_t centroids_size_;
+    void validate_data(const std::vector<std::vector<float>> &X, const std::vector<int> &y = {},
+                       bool check_labels = false) const;
 
-  void validate_data(const std::vector<std::vector<float>>& X,
-                     const std::vector<int>& y = {},
-                     bool check_labels = false) const;
+    void compute_centroids(const std::vector<std::vector<float>> &X, const std::vector<int> &y);
 
-  void compute_centroids(const std::vector<std::vector<float>>& X,
-                         const std::vector<int>& y);
+    float euclidean_distance_squared(const std::vector<float> &sample,
+                                     const std::vector<float> &centroid) const;
 
-  float euclidean_distance_squared(const std::vector<float>& sample,
-                                   const std::vector<float>& centroid) const;
+    std::vector<int> predict_cpu(const std::vector<std::vector<float>> &X) const;
+    std::vector<int> predict_cuda(const std::vector<std::vector<float>> &X) const;
 
-  std::vector<int> predict_cpu(const std::vector<std::vector<float>>& X) const;
-  std::vector<int> predict_cuda(const std::vector<std::vector<float>>& X) const;
+    bool initialize_cuda();
+    void allocate_cuda_memory();
+    void free_cuda_memory();
+    void transfer_centroids_to_device();
 
-  bool initialize_cuda();
-  void allocate_cuda_memory();
-  void free_cuda_memory();
-  void transfer_centroids_to_device();
-  
-  int get_max_class(const std::vector<int>& Y) const;
+    int get_max_class(const std::vector<int> &Y) const;
 };
 
-}
+} // namespace mdc

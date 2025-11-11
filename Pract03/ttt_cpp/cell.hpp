@@ -3,9 +3,9 @@
 #include <SFML/Graphics.hpp>
 
 enum CellState {
-  EMPTY,
-  X_PLAYER,
-  O_PLAYER,
+    EMPTY,
+    X_PLAYER,
+    O_PLAYER,
 };
 
 class Cell {
@@ -13,6 +13,7 @@ class Cell {
     CellState state;
     sf::Vector2f position;
     float size;
+
   public:
     Cell();
     Cell(float x, float y, float s);
@@ -20,7 +21,7 @@ class Cell {
     void setState(CellState state);
     CellState getState() const;
 
-    void draw(sf::RenderWindow& window) const;
+    void draw(sf::RenderWindow &window) const;
 };
 
 #endif
