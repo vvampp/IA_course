@@ -188,7 +188,8 @@ bool check_cuda_available() {
         cudaDeviceProp prop;
         cudaGetDeviceProperties(&prop, i);
 
-        if (prop.major >= 3 || (prop.major == 3 && prop.minor >= 5)) {
+        // in line with CMake file requirements
+        if (prop.major >= 7) {
             return true;
         }
     }
