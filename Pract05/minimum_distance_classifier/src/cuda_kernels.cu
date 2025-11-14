@@ -1,4 +1,4 @@
-#ifdef USE_CUDA
+// #ifdef USE_CUDA
 
 // temporal filepath for development
 #include "cuda_kernels.cuh"
@@ -100,8 +100,8 @@ __global__ void find_minimum_kernel(const float *distances, int *predictions, in
     predictions[sample_idx] = best_class;
 }
 
-__global__ void find_minimum_kernel_parallell(const float *distances, int *predictions,
-                                              int n_samples, int n_classes) {
+__global__ void find_minimum_kernel_parallel(const float *distances, int *predictions,
+                                             int n_samples, int n_classes) {
     int sample_idx = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (sample_idx >= n_samples) {
@@ -314,8 +314,8 @@ void cuda_classify(const float *h_samples, const float *d_centroids, int *h_pred
     if (n_classes > 64) {
         // parallel reduction if too much classes
         dim3 block_dim(threads_per_block, 8, 1);
-        find_minimum_kernel_parallell<<<blocks, block_dim>>>(d_distances, d_predictions, n_samples,
-                                                             n_classes);
+        find_minimum_kernel_parallel<<<blocks, block_dim>>>(d_distances, d_predictions, n_samples,
+                                                            n_classes);
     } else {
         // secuential reduction for small amout of classes
         find_minimum_kernel<<<blocks, threads_per_block>>>(d_distances, d_predictions, n_samples,
@@ -350,6 +350,10 @@ void cuda_classify_streams(const float *h_samples, const float *d_centroids, int
     // copy to pinned memory
     std::copy(h_samples, h_samples + n_samples * n_features, h_samples_pinned);
 
+    // FIX: store device pointers
+    std::vector<float *> d_samples_chunks(n_streams);
+    std::vector<int *> d_predictions_chunks(n_streams);
+
     // parallel chunk processing
     for (int i = 0; i < n_streams; ++i) {
         int offset = i * chunk_size;
@@ -365,22 +369,23 @@ void cuda_classify_streams(const float *h_samples, const float *d_centroids, int
         size_t samples_chunk_size = current_chunk_size * n_features * sizeof(float);
         size_t predictions_chunk_size = current_chunk_size * sizeof(int);
 
-        CUDA_CHECK(cudaMalloc(&d_samples_chunk, samples_chunk_size));
-        CUDA_CHECK(cudaMalloc(&d_predictions_chunk, predictions_chunk_size));
+        // allocate into vectors
+        CUDA_CHECK(cudaMalloc(&d_samples_chunks[i], samples_chunk_size));
+        CUDA_CHECK(cudaMalloc(&d_predictions_chunks[i], predictions_chunk_size));
 
         // async transfer H2D
-        cuda_memcpy_async_htod(d_samples_chunk, h_samples_pinned + offset * n_features,
+        cuda_memcpy_async_htod(d_samples_chunks, h_samples_pinned + offset * n_features,
                                samples_chunk_size, streams[i]);
 
         int threads = 256;
         int blocks = (current_chunk_size + threads - 1) / threads;
 
         classify_fused_kernel<<<blocks, threads, 0, streams[i]>>>(
-            d_samples_chunk, d_centroids, d_predictions_chunk, current_chunk_size, n_features,
-            n_classes);
+            d_samples_chunks[i], d_centroids, d_predictions_chunks[i], current_chunk_size,
+            n_features, n_classes);
 
         // async transfer D2H
-        cuda_memcpy_async_dtoh_int(h_predictions_pinned + offset, d_predictions_chunk,
+        cuda_memcpy_async_dtoh_int(h_predictions_pinned + offset, d_predictions_chunks[i],
                                    predictions_chunk_size, streams[i]);
         // free mem after sync
     }
@@ -388,6 +393,15 @@ void cuda_classify_streams(const float *h_samples, const float *d_centroids, int
     // sync streams
     for (int i = 0; i < n_streams; ++i) {
         CUDA_CHECK(cudaStreamSynchronize(streams[i]));
+
+        // free device mem after sync
+        if (d_samples_chunks[i] != nullptr) {
+            CUDA_CHECK(cudaFree(d_samples_chunks[i]));
+        }
+        if (d_predictions_chunks[i] != nullptr) {
+            CUDA_CHECK(cudaFree(d_predictions_chunks[i]));
+        }
+
         CUDA_CHECK(cudaStreamDestroy(streams[i]));
     }
 
