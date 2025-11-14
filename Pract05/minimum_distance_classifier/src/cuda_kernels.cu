@@ -1,4 +1,4 @@
-// #ifdef USE_CUDA
+#ifdef USE_CUDA
 
 #include "cuda_kernels.cuh"
 #include <algorithm>
