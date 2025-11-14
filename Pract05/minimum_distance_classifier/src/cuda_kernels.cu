@@ -1,6 +1,5 @@
 // #ifdef USE_CUDA
 
-// temporal filepath for development
 #include "cuda_kernels.cuh"
 #include <algorithm>
 #include <cfloat>
@@ -262,9 +261,10 @@ void cuda_classify(const float *h_samples, const float *d_centroids, int *h_pred
     float *d_distances = nullptr;
     int *d_predictions = nullptr;
 
-    size_t samples_size = n_samples * n_features * sizeof(float);
-    size_t distance_size = n_samples * n_classes * sizeof(float);
-    size_t predictions_size = n_samples * sizeof(int);
+    // static cast to size_t to prevent overflow
+    size_t samples_size = static_cast<size_t>(n_samples) * n_features * sizeof(float);
+    size_t distance_size = static_cast<size_t>(n_samples) * n_classes * sizeof(float);
+    size_t predictions_size = static_cast<size_t>(n_samples) * sizeof(int);
 
     CUDA_CHECK(cudaMalloc(&d_samples, samples_size));
     CUDA_CHECK(cudaMalloc(&d_distances, distance_size));
@@ -345,8 +345,11 @@ void cuda_classify_streams(const float *h_samples, const float *d_centroids, int
     // useful for async transfers
     float *h_samples_pinned;
     int *h_predictions_pinned;
-    CUDA_CHECK(cudaMallocHost(&h_samples_pinned, n_samples * n_features * sizeof(float)));
-    CUDA_CHECK(cudaMallocHost(&h_predictions_pinned, n_samples * sizeof(int)));
+
+    // static cast accord to initial initialization
+    CUDA_CHECK(cudaMallocHost(&h_samples_pinned,
+                              static_cast<size_t>(n_samples) * n_features * sizeof(float)));
+    CUDA_CHECK(cudaMallocHost(&h_predictions_pinned, static_cast<size_t>(n_samples) * sizeof(int)));
 
     // copy to pinned memory
     std::copy(h_samples, h_samples + n_samples * n_features, h_samples_pinned);
