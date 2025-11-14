@@ -107,6 +107,24 @@ TEST_F(MinimumDistanceClassifierTest, PredictBasic) {
     EXPECT_EQ(predictions[1], 1);
 }
 
+TEST_F(MinimumDistanceClassifierTest, GetBasicCentroids) {
+    MinimumDistanceClassifier clf(false);
+    clf.fit(X_simple, y_simple);
+
+    auto centroids = clf.get_centroids();
+
+    EXPECT_EQ(centroids.size(), 2);
+    EXPECT_EQ(centroids[0].size(), 2);
+
+    // check centroid for class 0
+    EXPECT_NEAR(centroids[0][0], 0.05f, 1e-5);
+    EXPECT_NEAR(centroids[0][1], 0.05f, 1e-5);
+
+    // check centroids for class 1
+    EXPECT_NEAR(centroids[1][0], 5.05f, 1e-5);
+    EXPECT_NEAR(centroids[1][1], 5.05f, 1e-5);
+}
+
 // main
 
 int main(int argc, char **argv) {
