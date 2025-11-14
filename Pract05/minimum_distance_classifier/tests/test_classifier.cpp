@@ -57,8 +57,6 @@ float calculate_accuracy(const std::vector<int> &y_true, const std::vector<int> 
     return static_cast<float>(correct) / y_true.size();
 }
 
-// Constructor Tests
-
 class MinimumDistanceClassifierTest : public ::testing::Test {
   protected:
     void SetUp() override {
@@ -69,6 +67,8 @@ class MinimumDistanceClassifierTest : public ::testing::Test {
     std::vector<std::vector<float>> X_simple;
     std::vector<int> y_simple;
 };
+
+// Constructor Tests
 
 TEST_F(MinimumDistanceClassifierTest, ConstructorCPU) {
     EXPECT_NO_THROW(MinimumDistanceClassifier clf(false));
@@ -83,6 +83,31 @@ TEST_F(MinimumDistanceClassifierTest, ConstructorCUDA) {
 
     EXPECT_FALSE(clf.is_fitted());
 }
+
+// Basic testing
+
+TEST_F(MinimumDistanceClassifierTest, FitBasic) {
+    MinimumDistanceClassifier clf(false);
+
+    EXPECT_NO_THROW(clf.fit(X_simple, y_simple));
+    EXPECT_TRUE(clf.is_fitted());
+    EXPECT_EQ(clf.get_n_classes(), 2);
+    EXPECT_EQ(clf.get_n_features(), 2);
+}
+
+TEST_F(MinimumDistanceClassifierTest, PredictBasic) {
+    MinimumDistanceClassifier clf(false);
+    clf.fit(X_simple, y_simple);
+
+    std::vector<std::vector<float>> X_test = {{0.0f, 0.0f}, {5.0f, 5.0f}};
+    std::vector<int> predictions = clf.predict(X_test);
+
+    EXPECT_EQ(predictions.size(), 2);
+    EXPECT_EQ(predictions[0], 0);
+    EXPECT_EQ(predictions[1], 1);
+}
+
+// main
 
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
