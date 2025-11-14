@@ -125,6 +125,27 @@ TEST_F(MinimumDistanceClassifierTest, GetBasicCentroids) {
     EXPECT_NEAR(centroids[1][1], 5.05f, 1e-5);
 }
 
+TEST_F(MinimumDistanceClassifierTest, MoveAssingment) {
+    MinimumDistanceClassifier clf1(false);
+    clf1.fit(X_simple, y_simple);
+
+    MinimumDistanceClassifier clf2(false);
+    clf2 = std::move(clf1);
+
+    EXPECT_TRUE(clf2.is_fitted());
+    EXPECT_FALSE(clf1.is_fitted());
+}
+
+TEST_F(MinimumDistanceClassifierTest, MoveConstructor) {
+    MinimumDistanceClassifier clf1(false);
+    clf1.fit(X_simple, y_simple);
+
+    MinimumDistanceClassifier clf2(std::move(clf1));
+
+    EXPECT_TRUE(clf2.is_fitted());
+    EXPECT_FALSE(clf1.is_fitted());
+}
+
 // main
 
 int main(int argc, char **argv) {
