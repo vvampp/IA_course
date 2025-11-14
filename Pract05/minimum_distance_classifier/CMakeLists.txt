@@ -1,77 +1,90 @@
-cmake_minimum_required(VERSION 3.18)
-project(MinimumDistanceClassifier LANGUAGES CXX CUDA)
+.PHONY: all build test clean help install python-module cuda-test cpu-test
 
-# Find CUDA Toolkit
-find_package(CUDAToolkit REQUIRED)
+# Default target
+all: build
 
-# Find pybind11
-find_package(pybind11 REQUIRED)
+# Build everything
+build:
+	@echo "Building project..."
+	@./build_and_test.sh --no-tests
 
-# C++ standard
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# Build and run tests
+test:
+	@echo "Building and testing..."
+	@./build_and_test.sh
 
-# CUDA standard
-set(CMAKE_CUDA_STANDARD 17)
-set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+# Build only CPU version
+cpu:
+	@echo "Building CPU-only version..."
+	@./build_and_test.sh --no-cuda
 
-# Option
-option(USE_CUDA "Build with CUDA support" ON)
+# Run only CUDA tests
+cuda-test:
+	@echo "Running CUDA tests..."
+	@cd build && ./test_classifier --gtest_filter="*CUDA*"
 
-# Include directories
-include_directories(${PROJECT_SOURCE_DIR}/include)
-include_directories(${CUDAToolkit_INCLUDE_DIRS})
+# Run only CPU tests
+cpu-test:
+	@echo "Running CPU tests..."
+	@cd build && ./test_classifier --gtest_filter="-*CUDA*"
 
-# Compilation flags C++
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native -Wall -Wextra")
+# Clean build artifacts
+clean:
+	@echo "Cleaning build directory..."
+	@rm -rf build
+	@echo "Clean complete!"
 
-# Compilation flags CUDA
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3 --use_fast_math")
-set(CMAKE_CUDA_ARCHITECTURES "89")
+# Clean and rebuild
+rebuild: clean build
 
-# Sources
-set(CPP_SOURCES src/classifier.cpp)
-set(CUDA_SOURCES src/cuda_kernels.cu)
-set(BINDING_SOURCES src/python_bindings.cpp)
+# Run tests with verbose output
+test-verbose:
+	@cd build && ./test_classifier --gtest_print_time=1
 
-if(USE_CUDA)
-    add_definitions(-DUSE_CUDA)
-    
-    # Static library with C++/CUDA code
-    add_library(mdc_static STATIC ${CPP_SOURCES} ${CUDA_SOURCES})
-    
-    set_target_properties(mdc_static PROPERTIES
-        CUDA_SEPARABLE_COMPILATION ON
-        CUDA_RESOLVE_DEVICE_SYMBOLS ON
-        POSITION_INDEPENDENT_CODE ON
-    )
-    
-    target_link_libraries(mdc_static PUBLIC CUDA::cudart)
-    
-    # pynthon module for linkage
-    pybind11_add_module(mdc_core MODULE ${BINDING_SOURCES})
-    
-    target_link_libraries(mdc_core PRIVATE 
-        mdc_static
-        CUDA::cudart
-        CUDA::cuda_driver
-    )
-    
-    set_target_properties(mdc_core PROPERTIES
-        POSITION_INDEPENDENT_CODE ON
-    )
-else()
-    pybind11_add_module(mdc_core MODULE
-        ${BINDING_SOURCES}
-        ${CPP_SOURCES}
-    )
-endif()
+# Run specific test suite
+test-basic:
+	@cd build && ./test_classifier --gtest_filter="MinimumDistanceClassifierTest.*"
 
-# Build info
-message(STATUS "=== Build Configuration ===")
-message(STATUS "C++ Compiler: ${CMAKE_CXX_COMPILER}")
-message(STATUS "CUDA Compiler: ${CMAKE_CUDA_COMPILER}")
-message(STATUS "CUDA Toolkit: ${CUDAToolkit_VERSION}")
-message(STATUS "CUDA Architectures: ${CMAKE_CUDA_ARCHITECTURES}")
-message(STATUS "USE_CUDA: ${USE_CUDA}")
-message(STATUS "===========================")
+test-validation:
+	@cd build && ./test_classifier --gtest_filter="*Validation*"
+
+test-accuracy:
+	@cd build && ./test_classifier --gtest_filter="*Accuracy*"
+
+# List all tests
+list-tests:
+	@cd build && ./test_classifier --gtest_list_tests
+
+# Install Python module (development mode)
+install-dev:
+	@echo "Installing Python module in development mode..."
+	@pip install -e python/
+
+# Show help
+help:
+	@echo "Minimum Distance Classifier - Makefile Commands"
+	@echo ""
+	@echo "Usage: make [target]"
+	@echo ""
+	@echo "Targets:"
+	@echo "  all            - Build project (default)"
+	@echo "  build          - Build project without tests"
+	@echo "  test           - Build and run all tests"
+	@echo "  cpu            - Build CPU-only version"
+	@echo "  cuda-test      - Run only CUDA tests"
+	@echo "  cpu-test       - Run only CPU tests"
+	@echo "  clean          - Remove build directory"
+	@echo "  rebuild        - Clean and rebuild"
+	@echo "  test-verbose   - Run tests with timing information"
+	@echo "  test-basic     - Run basic functionality tests"
+	@echo "  test-validation- Run validation tests"
+	@echo "  test-accuracy  - Run accuracy tests"
+	@echo "  list-tests     - List all available tests"
+	@echo "  install-dev    - Install Python module (dev mode)"
+	@echo "  help           - Show this help message"
+	@echo ""
+	@echo "Examples:"
+	@echo "  make              # Build project"
+	@echo "  make test         # Build and run all tests"
+	@echo "  make clean test   # Clean rebuild and test"
+	@echo "  make cpu test     # Build CPU version and test"
