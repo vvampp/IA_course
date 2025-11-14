@@ -278,6 +278,90 @@ TEST(ClassifierAccuracyTests, OverlappingClusters) {
     EXPECT_GT(accuracy, 0.5f); // better than a coin toss
 }
 
+// edge case testing
+
+TEST(ClassifierEdgeCases, SingleSample) {
+    MinimumDistanceClassifier clf(false);
+    std::vector<std::vector<float>> X = {{1.0f, 2.0f}};
+    std::vector<int> y = {0};
+
+    EXPECT_NO_THROW(clf.fit(X, y));
+
+    auto predictions = clf.predict(X);
+    EXPECT_EQ(predictions[0], 0);
+}
+
+TEST(ClassifierEdgeCases, SingleClass) {
+    MinimumDistanceClassifier clf(false);
+    std::vector<std::vector<float>> X = {{1.0f, 2.0f}, {3.0f, 4.0f}, {5.0f, 6.0f}};
+    std::vector<int> y = {0, 0, 0};
+
+    EXPECT_NO_THROW(clf.fit(X, y));
+
+    auto predictions = clf.predict(X);
+    for (const auto &pred : predictions) {
+        EXPECT_EQ(pred, 0);
+    }
+}
+
+TEST(ClassifierEdgeCases, ManyClasses) {
+    int n_classes = 100;
+    auto X = generate_clusters(5, n_classes, 10, 20.0f);
+    auto y = generate_labels(5, n_classes);
+
+    MinimumDistanceClassifier clf(false);
+    EXPECT_NO_THROW(clf.fit(X, y));
+
+    EXPECT_EQ(clf.get_n_classes(), n_classes);
+}
+
+TEST(ClassifierEdgeCases, HighDimensional) {
+    int n_features = 500;
+    auto X = generate_clusters(10, 3, n_features, 50.0f);
+    auto y = generate_labels(10, 3);
+
+    MinimumDistanceClassifier clf(false);
+    EXPECT_NO_THROW(clf.fit(X, y));
+
+    EXPECT_EQ(clf.get_n_features(), n_features);
+}
+
+TEST(ClassifierEdgeCases, LargeDataset) {
+    int n_samples_per_class = 1000;
+
+    auto X = generate_clusters(n_samples_per_class, 5, 20, 10.0f);
+    auto y = generate_labels(n_samples_per_class, 5);
+
+    MinimumDistanceClassifier clf(false);
+    EXPECT_NO_THROW(clf.fit(X, y));
+
+    auto predictions = clf.predict(X);
+    EXPECT_EQ(predictions.size(), n_samples_per_class * 5);
+}
+
+TEST(ClassifierEdgeCases, EmptyPredictionSet) {
+    MinimumDistanceClassifier clf(false);
+    std::vector<std::vector<float>> X_train = {{1.0f, 2.0f}, {3.0f, 4.0f}};
+    std::vector<int> y_train = {0, 1};
+
+    EXPECT_NO_THROW(clf.fit(X_train, y_train));
+
+    std::vector<std::vector<float>> X_empty;
+    EXPECT_THROW(clf.predict(X_empty), std::invalid_argument);
+}
+
+TEST(ClassifierEdgeCases, IdenticalSamples) {
+    MinimumDistanceClassifier clf(false);
+    std::vector<std::vector<float>> X = {{1.0f, 2.0f}, {1.0f, 2.0f}, {3.0f, 4.0f}, {3.0f, 4.0f}};
+    std::vector<int> y = {0, 0, 1, 1};
+
+    EXPECT_NO_THROW(clf.fit(X, y));
+
+    auto predictions = clf.predict(X);
+    float accuracy = calculate_accuracy(y, predictions);
+    EXPECT_EQ(accuracy, 1.0f);
+}
+
 // main
 
 int main(int argc, char **argv) {
