@@ -1,90 +1,159 @@
-.PHONY: all build test clean help install python-module cuda-test cpu-test
+cmake_minimum_required(VERSION 3.5)
+project(MinimumDistanceClassifier LANGUAGES CXX)
 
-# Default target
-all: build
+# Options
+option(USE_CUDA "Build with CUDA support" ON)
+option(BUILD_TESTS "Build unit tests" ON)
 
-# Build everything
-build:
-	@echo "Building project..."
-	@./build_and_test.sh --no-tests
+# Find CUDA only if requested
+if(USE_CUDA)
+    find_package(CUDAToolkit)
+    if(CUDAToolkit_FOUND)
+        enable_language(CUDA)
+        set(CMAKE_CUDA_STANDARD 17)
+        set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+        set(CMAKE_CUDA_ARCHITECTURES "89")
+        message(STATUS "CUDA found and enabled")
+    else()
+        message(WARNING "CUDA requested but not found. Building CPU-only version.")
+        set(USE_CUDA OFF)
+    endif()
+endif()
 
-# Build and run tests
-test:
-	@echo "Building and testing..."
-	@./build_and_test.sh
+# Find pybind11
+find_package(pybind11 REQUIRED)
 
-# Build only CPU version
-cpu:
-	@echo "Building CPU-only version..."
-	@./build_and_test.sh --no-cuda
+# C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Run only CUDA tests
-cuda-test:
-	@echo "Running CUDA tests..."
-	@cd build && ./test_classifier --gtest_filter="*CUDA*"
+# Include directories
+include_directories(${PROJECT_SOURCE_DIR}/include)
+include_directories(${CUDAToolkit_INCLUDE_DIRS})
 
-# Run only CPU tests
-cpu-test:
-	@echo "Running CPU tests..."
-	@cd build && ./test_classifier --gtest_filter="-*CUDA*"
+# Compilation flags C++
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native -Wall -Wextra")
 
-# Clean build artifacts
-clean:
-	@echo "Cleaning build directory..."
-	@rm -rf build
-	@echo "Clean complete!"
+# Compilation flags CUDA
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3 --use_fast_math")
+set(CMAKE_CUDA_ARCHITECTURES "89")
 
-# Clean and rebuild
-rebuild: clean build
+# Sources
+set(CPP_SOURCES src/classifier.cpp)
+set(CUDA_SOURCES src/cuda_kernels.cu)
+set(BINDING_SOURCES src/python_bindings.cpp)
 
-# Run tests with verbose output
-test-verbose:
-	@cd build && ./test_classifier --gtest_print_time=1
+# ============================================================================
+# Python Module Target
+# ============================================================================
 
-# Run specific test suite
-test-basic:
-	@cd build && ./test_classifier --gtest_filter="MinimumDistanceClassifierTest.*"
+if(USE_CUDA)
+    add_definitions(-DUSE_CUDA)
+    
+    # Static library with C++/CUDA code
+    add_library(mdc_static STATIC ${CPP_SOURCES} ${CUDA_SOURCES})
+    
+    set_target_properties(mdc_static PROPERTIES
+        CUDA_SEPARABLE_COMPILATION ON
+        CUDA_RESOLVE_DEVICE_SYMBOLS ON
+        POSITION_INDEPENDENT_CODE ON
+    )
+    
+    target_link_libraries(mdc_static PUBLIC CUDA::cudart)
+    
+    # Python module for linkage
+    pybind11_add_module(mdc_core MODULE ${BINDING_SOURCES})
+    
+    target_link_libraries(mdc_core PRIVATE 
+        mdc_static
+        CUDA::cudart
+        CUDA::cuda_driver
+    )
+    
+    set_target_properties(mdc_core PROPERTIES
+        POSITION_INDEPENDENT_CODE ON
+    )
+else()
+    pybind11_add_module(mdc_core MODULE
+        ${BINDING_SOURCES}
+        ${CPP_SOURCES}
+    )
+endif()
 
-test-validation:
-	@cd build && ./test_classifier --gtest_filter="*Validation*"
+# ============================================================================
+# Test Target
+# ============================================================================
 
-test-accuracy:
-	@cd build && ./test_classifier --gtest_filter="*Accuracy*"
+if(BUILD_TESTS)
+    # Find Google Test
+    find_package(GTest)
+    
+    if(NOT GTest_FOUND)
+        message(STATUS "Google Test not found. Downloading via FetchContent...")
+        include(FetchContent)
+        FetchContent_Declare(
+            googletest
+            GIT_REPOSITORY https://github.com/google/googletest.git
+            GIT_TAG        v1.14.0
+        )
+        # For Windows: Prevent overriding the parent project's compiler/linker settings
+        set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+        FetchContent_MakeAvailable(googletest)
+    endif()
+    
+    enable_testing()
+    
+    # Test executable
+    if(USE_CUDA)
+        # Tests with CUDA support
+        add_executable(test_classifier 
+            tests/test_classifier.cpp
+            ${CPP_SOURCES}
+            ${CUDA_SOURCES}
+        )
+        
+        target_link_libraries(test_classifier 
+            GTest::gtest 
+            GTest::gtest_main
+            CUDA::cudart
+            CUDA::cuda_driver
+        )
+        
+        set_target_properties(test_classifier PROPERTIES
+            CUDA_SEPARABLE_COMPILATION ON
+            CUDA_RESOLVE_DEVICE_SYMBOLS ON
+        )
+    else()
+        # Tests without CUDA
+        add_executable(test_classifier 
+            tests/test_classifier.cpp
+            ${CPP_SOURCES}
+        )
+        
+        target_link_libraries(test_classifier 
+            GTest::gtest 
+            GTest::gtest_main
+        )
+    endif()
+    
+    target_include_directories(test_classifier PRIVATE ${PROJECT_SOURCE_DIR}/include)
+    
+    # Add test to CTest
+    include(GoogleTest)
+    gtest_discover_tests(test_classifier)
+    
+    message(STATUS "Tests will be built. Run with: make test or ctest")
+endif()
 
-# List all tests
-list-tests:
-	@cd build && ./test_classifier --gtest_list_tests
+# ============================================================================
+# Build info
+# ============================================================================
 
-# Install Python module (development mode)
-install-dev:
-	@echo "Installing Python module in development mode..."
-	@pip install -e python/
-
-# Show help
-help:
-	@echo "Minimum Distance Classifier - Makefile Commands"
-	@echo ""
-	@echo "Usage: make [target]"
-	@echo ""
-	@echo "Targets:"
-	@echo "  all            - Build project (default)"
-	@echo "  build          - Build project without tests"
-	@echo "  test           - Build and run all tests"
-	@echo "  cpu            - Build CPU-only version"
-	@echo "  cuda-test      - Run only CUDA tests"
-	@echo "  cpu-test       - Run only CPU tests"
-	@echo "  clean          - Remove build directory"
-	@echo "  rebuild        - Clean and rebuild"
-	@echo "  test-verbose   - Run tests with timing information"
-	@echo "  test-basic     - Run basic functionality tests"
-	@echo "  test-validation- Run validation tests"
-	@echo "  test-accuracy  - Run accuracy tests"
-	@echo "  list-tests     - List all available tests"
-	@echo "  install-dev    - Install Python module (dev mode)"
-	@echo "  help           - Show this help message"
-	@echo ""
-	@echo "Examples:"
-	@echo "  make              # Build project"
-	@echo "  make test         # Build and run all tests"
-	@echo "  make clean test   # Clean rebuild and test"
-	@echo "  make cpu test     # Build CPU version and test"
+message(STATUS "=== Build Configuration ===")
+message(STATUS "C++ Compiler: ${CMAKE_CXX_COMPILER}")
+message(STATUS "CUDA Compiler: ${CMAKE_CUDA_COMPILER}")
+message(STATUS "CUDA Toolkit: ${CUDAToolkit_VERSION}")
+message(STATUS "CUDA Architectures: ${CMAKE_CUDA_ARCHITECTURES}")
+message(STATUS "USE_CUDA: ${USE_CUDA}")
+message(STATUS "BUILD_TESTS: ${BUILD_TESTS}")
+message(STATUS "===========================")
