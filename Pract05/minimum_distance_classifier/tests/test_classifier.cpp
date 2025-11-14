@@ -362,6 +362,46 @@ TEST(ClassifierEdgeCases, IdenticalSamples) {
     EXPECT_EQ(accuracy, 1.0f);
 }
 
+// determinism tests
+TEST(ClassifierDeterminism, ConsistentResults) {
+    auto X = generate_clusters(50, 3, 5, 10.0f, 12345);
+    auto y = generate_labels(50, 3);
+
+    MinimumDistanceClassifier clf1(false);
+    MinimumDistanceClassifier clf2(false);
+
+    clf1.fit(X, y);
+    clf2.fit(X, y);
+
+    auto pred1 = clf1.predict(X);
+    auto pred2 = clf2.predict(X);
+
+    EXPECT_EQ(pred1, pred2);
+}
+
+TEST(ClassifierDeterminism, ConsistentCentroids) {
+    auto X = generate_clusters(50, 3, 5, 10.0f, 54321);
+    auto y = generate_labels(50, 3);
+
+    MinimumDistanceClassifier clf1(false);
+    MinimumDistanceClassifier clf2(false);
+
+    clf1.fit(X, y);
+    clf2.fit(X, y);
+
+    auto centroids1 = clf1.get_centroids();
+    auto centroids2 = clf2.get_centroids();
+
+    ASSERT_EQ(centroids1.size(), centroids2.size());
+
+    for (size_t i = 0; i < centroids1.size(); ++i) {
+        ASSERT_EQ(centroids1[i].size(), centroids2[i].size());
+        for (size_t j = 0; j < centroids1[i].size(); ++j) {
+            EXPECT_FLOAT_EQ(centroids1[i][j], centroids2[i][j]);
+        }
+    }
+}
+
 // main
 
 int main(int argc, char **argv) {
