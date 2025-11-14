@@ -115,7 +115,8 @@ __global__ void find_minimum_kernel_parallel(const float *distances, int *predic
     int best_class = 0;
 
     // first pass: find local minima
-    for (int c = 0; c < n_classes; c += blockDim.y) {
+    // start from threadIdx.y
+    for (int c = threadIdx.y; c < n_classes; c += blockDim.y) {
         float dist = sample_distances[c];
         if (dist < min_dist) {
             min_dist = dist;
