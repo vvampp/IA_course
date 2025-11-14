@@ -279,8 +279,8 @@ TEST(ClassifierAccuracyTests, OverlappingClusters) {
 }
 
 TEST(ClassifierAccuracyTests, HeavyWorkload) {
-    auto X = generate_clusters(200, 50, 120, 3.0f);
-    auto y = generate_labels(200, 50);
+    auto X = generate_clusters(20000, 50, 120, 3.0f);
+    auto y = generate_labels(20000, 50);
 
     MinimumDistanceClassifier clf(false);
     clf.fit(X, y);
@@ -413,6 +413,87 @@ TEST(ClassifierDeterminism, ConsistentCentroids) {
             EXPECT_FLOAT_EQ(centroids1[i][j], centroids2[i][j]);
         }
     }
+}
+
+// CUDA tests
+
+TEST(CUDA_Correctness, SameResultsAsCPU_SmallDataset) {
+    auto X = generate_clusters(10, 2, 4);
+    auto y = generate_labels(10, 2);
+
+    MinimumDistanceClassifier clf_cpu(false);
+    MinimumDistanceClassifier clf_gpu(true);
+
+    clf_cpu.fit(X, y);
+    clf_gpu.fit(X, y);
+
+    auto prediction_cpu = clf_cpu.predict(X);
+    auto prediction_gpu = clf_gpu.predict(X);
+
+    EXPECT_EQ(prediction_cpu, prediction_gpu);
+
+    float accuracy_cpu = calculate_accuracy(y, prediction_cpu);
+    float accuracy_gpu = calculate_accuracy(y, prediction_gpu);
+
+    EXPECT_EQ(accuracy_cpu, accuracy_gpu);
+}
+
+TEST(CUDA_Correctness, SameResultsAsCPU_MediumDataset) {
+    auto X = generate_clusters(100, 5, 12);
+    auto y = generate_labels(100, 5);
+
+    MinimumDistanceClassifier clf_cpu(false);
+    MinimumDistanceClassifier clf_gpu(true);
+
+    clf_cpu.fit(X, y);
+    clf_gpu.fit(X, y);
+
+    auto prediction_cpu = clf_cpu.predict(X);
+    auto prediction_gpu = clf_gpu.predict(X);
+
+    EXPECT_EQ(prediction_cpu, prediction_gpu);
+
+    float accuracy_cpu = calculate_accuracy(y, prediction_cpu);
+    float accuracy_gpu = calculate_accuracy(y, prediction_gpu);
+
+    EXPECT_EQ(accuracy_cpu, accuracy_gpu);
+}
+
+TEST(CUDA_Correctness, SameResultsAsCPU_LargeDataset) {
+    auto X = generate_clusters(10000, 20, 40);
+    auto y = generate_labels(10000, 20);
+
+    MinimumDistanceClassifier clf_cpu(false);
+    MinimumDistanceClassifier clf_gpu(true);
+
+    clf_cpu.fit(X, y);
+    clf_gpu.fit(X, y);
+
+    auto prediction_cpu = clf_cpu.predict(X);
+    auto prediction_gpu = clf_gpu.predict(X);
+
+    EXPECT_EQ(prediction_cpu, prediction_gpu);
+
+    float accuracy_cpu = calculate_accuracy(y, prediction_cpu);
+    float accuracy_gpu = calculate_accuracy(y, prediction_gpu);
+
+    EXPECT_EQ(accuracy_cpu, accuracy_gpu);
+}
+
+TEST(CUDA_Correctness, SameCentroidsAsCPU) {
+    auto X = generate_clusters(1000, 5, 12);
+    auto y = generate_labels(1000, 5);
+
+    MinimumDistanceClassifier clf_cpu(false);
+    MinimumDistanceClassifier clf_gpu(true);
+
+    clf_cpu.fit(X, y);
+    clf_gpu.fit(X, y);
+
+    auto centroids_cpu = clf_cpu.get_centroids();
+    auto centroids_gpu = clf_gpu.get_centroids();
+
+    EXPECT_EQ(centroids_cpu, centroids_gpu);
 }
 
 // main
