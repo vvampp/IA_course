@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <exception>
 #include <iostream>
 #include <limits>
 #include <numeric>
@@ -314,7 +315,10 @@ int MinimumDistanceClassifier::get_max_class(const std::vector<int> &y) const {
     if (y.empty()) {
         return 0;
     }
-    return *std::max_element(y.begin(), y.end());
+    int max_class = *std::max_element(y.begin(), y.end());
+    if (max_class > 99999)
+        throw std::invalid_argument("Too many classes no the dataset (<9999)");
+    return max_class;
 }
 
 } // namespace mdc

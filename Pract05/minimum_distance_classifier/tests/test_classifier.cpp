@@ -223,6 +223,14 @@ TEST_F(MinimumDistanceClassifierTest, WrongFeatureCountOnPredict) {
     EXPECT_THROW(clf.predict(X_wrong), std::invalid_argument);
 }
 
+TEST_F(MinimumDistanceClassifierTest, MaxClassesLimit) {
+    MinimumDistanceClassifier clf(false);
+    std::vector<std::vector<float>> X = {{1.0f, 2.0f}};
+    std::vector<int> y = {1000000}; // high class id
+
+    EXPECT_THROW(clf.fit(X, y), std::invalid_argument);
+}
+
 // main
 
 int main(int argc, char **argv) {
