@@ -8,9 +8,9 @@
 using namespace mdc;
 
 // helper functions
-std::vector<std::vector<float>> generate_2d_clusters(int n_samples_per_class, int n_classes,
-                                                     int n_features, float separation = 5.0f,
-                                                     unsigned seed = 42) {
+std::vector<std::vector<float>> generate_clusters(int n_samples_per_class, int n_classes,
+                                                  int n_features, float separation = 5.0f,
+                                                  unsigned seed = 42) {
     std::mt19937 rng(seed);
     std::normal_distribution<float> dist(0.0f, 1.0f);
 
@@ -157,6 +157,13 @@ TEST_F(MinimumDistanceClassifierTest, EmtpyData) {
     EXPECT_THROW(clf.fit(X_empty, y_empty), std::invalid_argument);
 }
 
+TEST_F(MinimumDistanceClassifierTest, EmtpyTags) {
+    MinimumDistanceClassifier clf(false);
+    std::vector<int> y_empty;
+
+    EXPECT_THROW(clf.fit(X_simple, y_empty), std::invalid_argument);
+}
+
 TEST_F(MinimumDistanceClassifierTest, EmtpyFeatures) {
     MinimumDistanceClassifier clf(false);
     std::vector<std::vector<float>> X = {{}};
@@ -229,6 +236,46 @@ TEST_F(MinimumDistanceClassifierTest, MaxClassesLimit) {
     std::vector<int> y = {1000000}; // high class id
 
     EXPECT_THROW(clf.fit(X, y), std::invalid_argument);
+}
+
+// accuracy tests
+TEST(ClassifierAccuracyTests, WellSeparatedClusters2D) {
+    auto X = generate_clusters(50, 3, 2, 10.0f);
+    auto y = generate_labels(50, 3);
+
+    MinimumDistanceClassifier clf(false);
+    clf.fit(X, y);
+
+    auto predictions = clf.predict(X);
+    float accuracy = calculate_accuracy(y, predictions);
+
+    EXPECT_GT(accuracy, 0.95f);
+}
+
+TEST(ClassifierAccuracyTests, WellSeparatedClusters10D) {
+    auto X = generate_clusters(30, 4, 10, 15.0f);
+    auto y = generate_labels(30, 4);
+
+    MinimumDistanceClassifier clf(false);
+    clf.fit(X, y);
+
+    auto predictions = clf.predict(X);
+    float accuracy = calculate_accuracy(y, predictions);
+
+    EXPECT_GT(accuracy, 0.90f);
+}
+
+TEST(ClassifierAccuracyTests, OverlappingClusters) {
+    auto X = generate_clusters(50, 2, 2, 1.0f);
+    auto y = generate_labels(50, 2);
+
+    MinimumDistanceClassifier clf(false);
+    clf.fit(X, y);
+
+    auto predictions = clf.predict(X);
+    float accuracy = calculate_accuracy(y, predictions);
+
+    EXPECT_GT(accuracy, 0.5f); // better than a coin toss
 }
 
 // main

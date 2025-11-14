@@ -316,8 +316,9 @@ int MinimumDistanceClassifier::get_max_class(const std::vector<int> &y) const {
         return 0;
     }
     int max_class = *std::max_element(y.begin(), y.end());
-    if (max_class > 99999)
-        throw std::invalid_argument("Too many classes no the dataset (<9999)");
+    if (max_class > 99999) {
+        throw std::invalid_argument("Too many classes ... tags must be less than 99999");
+    }
     return max_class;
 }
 
