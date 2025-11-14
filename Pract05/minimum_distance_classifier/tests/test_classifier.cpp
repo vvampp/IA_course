@@ -205,6 +205,24 @@ TEST_F(MinimumDistanceClassifierTest, InfInData) {
     EXPECT_THROW(clf.fit(X, y), std::invalid_argument);
 }
 
+TEST_F(MinimumDistanceClassifierTest, PredictBeforeFit) {
+    MinimumDistanceClassifier clf(false);
+    EXPECT_THROW(clf.predict(X_simple), std::runtime_error);
+}
+
+TEST_F(MinimumDistanceClassifierTest, GetCentroidsBeforeFit) {
+    MinimumDistanceClassifier clf(false);
+    EXPECT_THROW(clf.get_centroids(), std::runtime_error);
+}
+
+TEST_F(MinimumDistanceClassifierTest, WrongFeatureCountOnPredict) {
+    MinimumDistanceClassifier clf(false);
+    clf.fit(X_simple, y_simple); // 2 features
+
+    std::vector<std::vector<float>> X_wrong = {{1.0f, 2.0f, 3.0f}};
+    EXPECT_THROW(clf.predict(X_wrong), std::invalid_argument);
+}
+
 // main
 
 int main(int argc, char **argv) {
