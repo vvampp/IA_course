@@ -278,6 +278,19 @@ TEST(ClassifierAccuracyTests, OverlappingClusters) {
     EXPECT_GT(accuracy, 0.5f); // better than a coin toss
 }
 
+TEST(ClassifierAccuracyTests, HeavyWorkload) {
+    auto X = generate_clusters(200, 50, 120, 3.0f);
+    auto y = generate_labels(200, 50);
+
+    MinimumDistanceClassifier clf(false);
+    clf.fit(X, y);
+
+    auto predictions = clf.predict(X);
+    float accuracy = calculate_accuracy(y, predictions);
+
+    EXPECT_GT(accuracy, 0.75f); // better than a coin toss
+}
+
 // edge case testing
 
 TEST(ClassifierEdgeCases, SingleSample) {
