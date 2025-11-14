@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <gtest/gtest.h>
 #include <random>
+#include <stdexcept>
 #include <vector>
 
 using namespace mdc;
@@ -144,6 +145,64 @@ TEST_F(MinimumDistanceClassifierTest, MoveConstructor) {
 
     EXPECT_TRUE(clf2.is_fitted());
     EXPECT_FALSE(clf1.is_fitted());
+}
+
+// validation tests
+
+TEST_F(MinimumDistanceClassifierTest, EmtpyData) {
+    MinimumDistanceClassifier clf(false);
+    std::vector<std::vector<float>> X_empty;
+    std::vector<int> y_empty;
+
+    EXPECT_THROW(clf.fit(X_empty, y_empty), std::invalid_argument);
+}
+
+TEST_F(MinimumDistanceClassifierTest, EmtpyFeatures) {
+    MinimumDistanceClassifier clf(false);
+    std::vector<std::vector<float>> X = {{}};
+    std::vector<int> y = {0};
+
+    EXPECT_THROW(clf.fit(X, y), std::invalid_argument);
+}
+
+TEST_F(MinimumDistanceClassifierTest, MismatchedSizes) {
+    MinimumDistanceClassifier clf(false);
+    std::vector<std::vector<float>> X = {{1.0f, 2.0f}, {3.0f, 4.0f}};
+    std::vector<int> y = {0};
+
+    EXPECT_THROW(clf.fit(X, y), std::invalid_argument);
+}
+
+TEST_F(MinimumDistanceClassifierTest, InconsistentFeatures) {
+    MinimumDistanceClassifier clf(false);
+    std::vector<std::vector<float>> X = {{1.0f, 2.0f}, {3.0f, 4.0f, 5.0f}};
+    std::vector<int> y = {0, 1};
+
+    EXPECT_THROW(clf.fit(X, y), std::invalid_argument);
+}
+
+TEST_F(MinimumDistanceClassifierTest, NegativeLabels) {
+    MinimumDistanceClassifier clf(false);
+    std::vector<std::vector<float>> X = {{1.0f, 2.0f}, {3.0f, 4.0f}};
+    std::vector<int> y = {0, -1};
+
+    EXPECT_THROW(clf.fit(X, y), std::invalid_argument);
+}
+
+TEST_F(MinimumDistanceClassifierTest, NaNInData) {
+    MinimumDistanceClassifier clf(false);
+    std::vector<std::vector<float>> X = {{1.0f, 2.0f}, {NAN, 4.0f}};
+    std::vector<int> y = {0, 1};
+
+    EXPECT_THROW(clf.fit(X, y), std::invalid_argument);
+}
+
+TEST_F(MinimumDistanceClassifierTest, InfInData) {
+    MinimumDistanceClassifier clf(false);
+    std::vector<std::vector<float>> X = {{1.0f, 2.0f}, {INFINITY, 4.0f}};
+    std::vector<int> y = {0, 1};
+
+    EXPECT_THROW(clf.fit(X, y), std::invalid_argument);
 }
 
 // main
