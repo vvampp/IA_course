@@ -363,9 +363,6 @@ void cuda_classify_streams(const float *h_samples, const float *d_centroids, int
             break;
         }
 
-        float *d_samples_chunk;
-        int *d_predictions_chunk;
-
         size_t samples_chunk_size = current_chunk_size * n_features * sizeof(float);
         size_t predictions_chunk_size = current_chunk_size * sizeof(int);
 
@@ -374,7 +371,7 @@ void cuda_classify_streams(const float *h_samples, const float *d_centroids, int
         CUDA_CHECK(cudaMalloc(&d_predictions_chunks[i], predictions_chunk_size));
 
         // async transfer H2D
-        cuda_memcpy_async_htod(d_samples_chunks, h_samples_pinned + offset * n_features,
+        cuda_memcpy_async_htod(d_samples_chunks[i], h_samples_pinned + offset * n_features,
                                samples_chunk_size, streams[i]);
 
         int threads = 256;
