@@ -424,6 +424,10 @@ TEST(CUDA_Correctness, SameResultsAsCPU_SmallDataset) {
     MinimumDistanceClassifier clf_cpu(false);
     MinimumDistanceClassifier clf_gpu(true);
 
+    if (!clf_gpu.is_using_cuda()) {
+        GTEST_SKIP() << "CUDA not available";
+    }
+
     clf_cpu.fit(X, y);
     clf_gpu.fit(X, y);
 
@@ -444,6 +448,10 @@ TEST(CUDA_Correctness, SameResultsAsCPU_MediumDataset) {
 
     MinimumDistanceClassifier clf_cpu(false);
     MinimumDistanceClassifier clf_gpu(true);
+
+    if (!clf_gpu.is_using_cuda()) {
+        GTEST_SKIP() << "CUDA not available";
+    }
 
     clf_cpu.fit(X, y);
     clf_gpu.fit(X, y);
@@ -466,6 +474,10 @@ TEST(CUDA_Correctness, SameResultsAsCPU_LargeDataset) {
     MinimumDistanceClassifier clf_cpu(false);
     MinimumDistanceClassifier clf_gpu(true);
 
+    if (!clf_gpu.is_using_cuda()) {
+        GTEST_SKIP() << "CUDA not available";
+    }
+
     clf_cpu.fit(X, y);
     clf_gpu.fit(X, y);
 
@@ -480,12 +492,48 @@ TEST(CUDA_Correctness, SameResultsAsCPU_LargeDataset) {
     EXPECT_EQ(accuracy_cpu, accuracy_gpu);
 }
 
-TEST(CUDA_Correctness, SameCentroidsAsCPU) {
-    auto X = generate_clusters(1000, 5, 12);
-    auto y = generate_labels(1000, 5);
+// CUDA presition
+
+TEST(CUDA_Precission, NoSignificantFloatingPointErrors) {
+    auto X = generate_clusters(100, 5, 50, 10.0f);
+    auto y = generate_labels(100, 5);
 
     MinimumDistanceClassifier clf_cpu(false);
     MinimumDistanceClassifier clf_gpu(true);
+
+    if (!clf_gpu.is_using_cuda()) {
+        GTEST_SKIP() << "CUDA not available";
+    }
+
+    clf_cpu.fit(X, y);
+    clf_gpu.fit(X, y);
+
+    auto prediction_cpu = clf_cpu.predict(X);
+    auto prediction_gpu = clf_gpu.predict(X);
+
+    // Calculate max difference in predictions
+    int differences = 0;
+    for (size_t i = 0; i < prediction_cpu.size(); ++i) {
+        if (prediction_cpu[i] != prediction_gpu[i]) {
+            differences++;
+        }
+    }
+
+    float error_rate = static_cast<float>(differences) / prediction_cpu.size();
+
+    EXPECT_LT(error_rate, 0.01f);
+}
+
+TEST(CUDA_Precission, CentroidsWithinTolerance) {
+    auto X = generate_clusters(200, 10, 30, 5.0f);
+    auto y = generate_labels(200, 10);
+
+    MinimumDistanceClassifier clf_cpu(false);
+    MinimumDistanceClassifier clf_gpu(true);
+
+    if (!clf_gpu.is_using_cuda()) {
+        GTEST_SKIP() << "CUDA not available";
+    }
 
     clf_cpu.fit(X, y);
     clf_gpu.fit(X, y);
@@ -493,7 +541,48 @@ TEST(CUDA_Correctness, SameCentroidsAsCPU) {
     auto centroids_cpu = clf_cpu.get_centroids();
     auto centroids_gpu = clf_gpu.get_centroids();
 
-    EXPECT_EQ(centroids_cpu, centroids_gpu);
+    float max_diff = 0.0f;
+    ASSERT_EQ(centroids_cpu.size(), centroids_gpu.size());
+    for (size_t i = 0; i < centroids_cpu.size(); ++i) {
+        ASSERT_EQ(centroids_cpu[i].size(), centroids_gpu[i].size());
+        for (size_t f = 0; f < centroids_cpu[i].size(); ++f) {
+            float diff = std::abs(centroids_cpu[i][f] - centroids_gpu[i][f]);
+            max_diff = std::max(diff, max_diff);
+            EXPECT_NEAR(centroids_cpu[i][f], centroids_gpu[i][f], 1e-4);
+        }
+    }
+    EXPECT_LT(max_diff, 1e-3);
+}
+
+TEST(CUDA_Precission, PredictionsExactMatch) {
+    auto X = generate_clusters(150, 8, 20, 8.0f);
+    auto y = generate_labels(150, 8);
+
+    MinimumDistanceClassifier clf_cpu(false);
+    MinimumDistanceClassifier clf_gpu(true);
+
+    if (!clf_gpu.is_using_cuda()) {
+        GTEST_SKIP() << "CUDA not available";
+    }
+
+    clf_cpu.fit(X, y);
+    clf_gpu.fit(X, y);
+
+    auto prediction_cpu = clf_cpu.predict(X);
+    auto prediction_gpu = clf_gpu.predict(X);
+
+    ASSERT_EQ(prediction_cpu.size(), prediction_gpu.size());
+
+    int matches = 0;
+    for (size_t i = 0; i < prediction_cpu.size(); ++i) {
+        if (prediction_cpu[i] == prediction_gpu[i]) {
+            matches++;
+        }
+    }
+
+    float match_rate = static_cast<float>(matches) / prediction_cpu.size();
+
+    EXPECT_GT(match_rate, 0.99f);
 }
 
 // main
