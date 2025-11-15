@@ -585,6 +585,32 @@ TEST(CUDA_Precision, PredictionsExactMatch) {
     EXPECT_GT(match_rate, 0.99f);
 }
 
+TEST(CUDA_Determinism, RepeatedRunsSameResults){
+    auto X = generate_clusters(1000, 5, 24, 4.0f);
+    auto X_test = generate_clusters(20, 5, 24, 2.0f);
+    auto y = generate_labels(1000, 5);
+
+    MinimumDistanceClassifier clf1(true);
+    MinimumDistanceClassifier clf2(true);
+    MinimumDistanceClassifier clf3(true);
+
+    EXPECT_NO_THROW(clf1.fit(X,y));
+    EXPECT_NO_THROW(clf2.fit(X,y));
+    EXPECT_NO_THROW(clf3.fit(X,y));
+
+    auto pred1 = clf1.predict(X_test);
+    auto pred2 = clf2.predict(X_test);
+    auto pred3 = clf3.predict(X_test);
+
+    ASSERT_EQ(pred1.size(), pred2.size());
+    ASSERT_EQ(pred2.size(), pred3.size());
+
+    for(size_t i = 0; i < pred1.size(); ++i){
+        EXPECT_EQ(pred1[i], pred2[i]);
+        EXPECT_EQ(pred2[i], pred3[i]);
+    }
+}
+
 // main
 
 int main(int argc, char **argv) {
