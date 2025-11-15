@@ -494,7 +494,7 @@ TEST(CUDA_Correctness, SameResultsAsCPU_LargeDataset) {
 
 // CUDA presition
 
-TEST(CUDA_Precission, NoSignificantFloatingPointErrors) {
+TEST(CUDA_Precision, NoSignificantFloatingPointErrors) {
     auto X = generate_clusters(100, 5, 50, 10.0f);
     auto y = generate_labels(100, 5);
 
@@ -524,7 +524,7 @@ TEST(CUDA_Precission, NoSignificantFloatingPointErrors) {
     EXPECT_LT(error_rate, 0.01f);
 }
 
-TEST(CUDA_Precission, CentroidsWithinTolerance) {
+TEST(CUDA_Precision, CentroidsWithinTolerance) {
     auto X = generate_clusters(200, 10, 30, 5.0f);
     auto y = generate_labels(200, 10);
 
@@ -554,7 +554,7 @@ TEST(CUDA_Precission, CentroidsWithinTolerance) {
     EXPECT_LT(max_diff, 1e-3);
 }
 
-TEST(CUDA_Precission, PredictionsExactMatch) {
+TEST(CUDA_Precision, PredictionsExactMatch) {
     auto X = generate_clusters(150, 8, 20, 8.0f);
     auto y = generate_labels(150, 8);
 
