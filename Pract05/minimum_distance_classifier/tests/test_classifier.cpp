@@ -7,55 +7,54 @@
 
 using namespace mdc;
 
-// helper functions
-std::vector<std::vector<float>> generate_clusters(int n_samples_per_class, int n_classes,
-                                                  int n_features, float separation = 5.0f,
-                                                  unsigned seed = 42) {
+struct Dataset{
+    std::vector<std::vector<float>> X;
+    std::vector<int> y;
+};
+
+Dataset generate_clusters(int n_samples_per_class, int n_classes,
+                          int n_features, float separation = 5.0f,
+                          unsigned seed = 42) {
     std::mt19937 rng(seed);
     std::normal_distribution<float> dist(0.0f, 1.0f);
 
-    std::vector<std::vector<float>> X;
-    X.reserve(n_samples_per_class * n_classes);
-
-    for (int c = 0; c < n_classes; ++c) {
+    Dataset dataset;
+    dataset.X.reserve(n_samples_per_class * n_classes);
+    dataset.y.reserve(n_samples_per_class * n_classes);
+    
+    for(int c = 0 ; c < n_classes; ++c){
         std::vector<float> center(n_features);
-        for (int f = 0; f < n_features; ++f) {
+        for(int f = 0; f < n_features; ++f){
             center[f] = c * separation;
         }
 
-        for (int i = 0; i < n_samples_per_class; ++i) {
+        for(int i = 0; i < n_samples_per_class ; ++i){
             std::vector<float> sample(n_features);
-            for (int f = 0; f < n_features; ++f) {
+            for(int f = 0 ; f < n_features ; ++f){
                 sample[f] = center[f] + dist(rng);
             }
-            X.push_back(sample);
+            dataset.X.push_back(sample);
+            dataset.y.push_back(c);
         }
     }
 
-    // shuffle X_shuffled
-    std::vector<size_t> indices(X.size());
+    // shuffle dataset
+    std::vector<size_t> indices(dataset.X.size());
     std::iota(indices.begin(), indices.end(), 0);
     std::shuffle(indices.begin(), indices.end(), rng);
 
-    std::vector<std::vector<float>>X_shuffled;
+    Dataset shuffled;
+    shuffled.X.reserve(dataset.X.size());
+    shuffled.y.reserve(dataset.y.size());
+
     for(const auto& idx : indices){
-        X_shuffled.push_back(X[idx]);
+        shuffled.X.push_back(dataset.X[idx]);
+        shuffled.y.push_back(dataset.y[idx]);
     }
 
-    return X_shuffled;
+    return shuffled;
 }
 
-std::vector<int> generate_labels(int n_samples_per_class, int n_classes) {
-    std::vector<int> y;
-    y.reserve(n_samples_per_class * n_classes);
-
-    for (int c = 0; c < n_classes; ++c) {
-        for (int i = 0; i < n_samples_per_class; ++i) {
-            y.push_back(c);
-        }
-    }
-    return y;
-}
 
 float calculate_accuracy(const std::vector<int> &y_true, const std::vector<int> &y_pred) {
     if (y_true.size() != y_pred.size())
@@ -69,6 +68,9 @@ float calculate_accuracy(const std::vector<int> &y_true, const std::vector<int> 
     return static_cast<float>(correct) / y_true.size();
 }
 
+
+// Constructor Tests
+
 class MinimumDistanceClassifierTest : public ::testing::Test {
   protected:
     void SetUp() override {
@@ -80,7 +82,6 @@ class MinimumDistanceClassifierTest : public ::testing::Test {
     std::vector<int> y_simple;
 };
 
-// Constructor Tests
 
 TEST_F(MinimumDistanceClassifierTest, ConstructorCPU) {
     EXPECT_NO_THROW(MinimumDistanceClassifier clf(false));
@@ -251,53 +252,49 @@ TEST_F(MinimumDistanceClassifierTest, MaxClassesLimit) {
 
 // accuracy tests
 TEST(ClassifierAccuracyTests, WellSeparatedClusters2D) {
-    auto X = generate_clusters(50, 3, 2, 10.0f);
-    auto y = generate_labels(50, 3);
+    auto dataset = generate_clusters(50,3,2,10.0f);
 
     MinimumDistanceClassifier clf(false);
-    clf.fit(X, y);
+    clf.fit(dataset.X, dataset.y);
 
-    auto predictions = clf.predict(X);
-    float accuracy = calculate_accuracy(y, predictions);
+    auto predictions = clf.predict(dataset.X);
+    float accuracy = calculate_accuracy(dataset.y, predictions);
 
     EXPECT_GT(accuracy, 0.95f);
 }
 
 TEST(ClassifierAccuracyTests, WellSeparatedClusters10D) {
-    auto X = generate_clusters(30, 4, 10, 15.0f);
-    auto y = generate_labels(30, 4);
+    auto dataset = generate_clusters(30, 4, 10, 15.0f);
 
     MinimumDistanceClassifier clf(false);
-    clf.fit(X, y);
+    clf.fit(dataset.X, dataset.y);
 
-    auto predictions = clf.predict(X);
-    float accuracy = calculate_accuracy(y, predictions);
+    auto predictions = clf.predict(dataset.X);
+    float accuracy = calculate_accuracy(dataset.y, predictions);
 
     EXPECT_GT(accuracy, 0.90f);
 }
 
 TEST(ClassifierAccuracyTests, OverlappingClusters) {
-    auto X = generate_clusters(50, 2, 2, 1.0f);
-    auto y = generate_labels(50, 2);
+    auto dataset = generate_clusters(50, 2, 2, 1.0f);
 
     MinimumDistanceClassifier clf(false);
-    clf.fit(X, y);
+    clf.fit(dataset.X, dataset.y);
 
-    auto predictions = clf.predict(X);
-    float accuracy = calculate_accuracy(y, predictions);
+    auto predictions = clf.predict(dataset.X);
+    float accuracy = calculate_accuracy(dataset.y, predictions);
 
     EXPECT_GT(accuracy, 0.5f); // better than a coin toss
 }
 
 TEST(ClassifierAccuracyTests, HeavyWorkload) {
-    auto X = generate_clusters(20000, 50, 120, 3.0f);
-    auto y = generate_labels(20000, 50);
+    auto dataset = generate_clusters(20000, 50, 120, 3.0f);
 
     MinimumDistanceClassifier clf(false);
-    clf.fit(X, y);
+    clf.fit(dataset.X, dataset.y);
 
-    auto predictions = clf.predict(X);
-    float accuracy = calculate_accuracy(y, predictions);
+    auto predictions = clf.predict(dataset.X);
+    float accuracy = calculate_accuracy(dataset.y, predictions);
 
     EXPECT_GT(accuracy, 0.75f); // better than a coin toss
 }
@@ -330,22 +327,20 @@ TEST(ClassifierEdgeCases, SingleClass) {
 
 TEST(ClassifierEdgeCases, ManyClasses) {
     int n_classes = 100;
-    auto X = generate_clusters(5, n_classes, 10, 20.0f);
-    auto y = generate_labels(5, n_classes);
+    auto dataset = generate_clusters(5, n_classes, 10, 20.0f);
 
     MinimumDistanceClassifier clf(false);
-    EXPECT_NO_THROW(clf.fit(X, y));
+    EXPECT_NO_THROW(clf.fit(dataset.X, dataset.y));
 
     EXPECT_EQ(clf.get_n_classes(), n_classes);
 }
 
 TEST(ClassifierEdgeCases, HighDimensional) {
     int n_features = 500;
-    auto X = generate_clusters(10, 3, n_features, 50.0f);
-    auto y = generate_labels(10, 3);
+    auto dataset = generate_clusters(10, 3, n_features, 50.0f);
 
     MinimumDistanceClassifier clf(false);
-    EXPECT_NO_THROW(clf.fit(X, y));
+    EXPECT_NO_THROW(clf.fit(dataset.X, dataset.y));
 
     EXPECT_EQ(clf.get_n_features(), n_features);
 }
@@ -353,13 +348,12 @@ TEST(ClassifierEdgeCases, HighDimensional) {
 TEST(ClassifierEdgeCases, LargeDataset) {
     int n_samples_per_class = 1000;
 
-    auto X = generate_clusters(n_samples_per_class, 5, 20, 10.0f);
-    auto y = generate_labels(n_samples_per_class, 5);
+    auto dataset = generate_clusters(n_samples_per_class, 5, 20, 10.0f);
 
     MinimumDistanceClassifier clf(false);
-    EXPECT_NO_THROW(clf.fit(X, y));
+    EXPECT_NO_THROW(clf.fit(dataset.X, dataset.y));
 
-    auto predictions = clf.predict(X);
+    auto predictions = clf.predict(dataset.X);
     EXPECT_EQ(predictions.size(), n_samples_per_class * 5);
 }
 
@@ -388,30 +382,28 @@ TEST(ClassifierEdgeCases, IdenticalSamples) {
 
 // determinism tests
 TEST(ClassifierDeterminism, ConsistentResults) {
-    auto X = generate_clusters(50, 3, 5, 10.0f, 12345);
-    auto y = generate_labels(50, 3);
+    auto dataset = generate_clusters(50, 3, 5, 10.0f, 12345);
 
     MinimumDistanceClassifier clf1(false);
     MinimumDistanceClassifier clf2(false);
 
-    clf1.fit(X, y);
-    clf2.fit(X, y);
+    clf1.fit(dataset.X, dataset.y);
+    clf2.fit(dataset.X, dataset.y);
 
-    auto pred1 = clf1.predict(X);
-    auto pred2 = clf2.predict(X);
+    auto pred1 = clf1.predict(dataset.X);
+    auto pred2 = clf2.predict(dataset.X);
 
     EXPECT_EQ(pred1, pred2);
 }
 
 TEST(ClassifierDeterminism, ConsistentCentroids) {
-    auto X = generate_clusters(50, 3, 5, 10.0f, 54321);
-    auto y = generate_labels(50, 3);
+    auto dataset = generate_clusters(50, 3, 5, 10.0f, 54321);
 
     MinimumDistanceClassifier clf1(false);
     MinimumDistanceClassifier clf2(false);
 
-    clf1.fit(X, y);
-    clf2.fit(X, y);
+    clf1.fit(dataset.X, dataset.y);
+    clf2.fit(dataset.X, dataset.y);
 
     auto centroids1 = clf1.get_centroids();
     auto centroids2 = clf2.get_centroids();
@@ -429,8 +421,7 @@ TEST(ClassifierDeterminism, ConsistentCentroids) {
 // CUDA tests
 
 TEST(CUDA_Correctness, SameResultsAsCPU_SmallDataset) {
-    auto X = generate_clusters(10, 2, 4);
-    auto y = generate_labels(10, 2);
+    auto dataset = generate_clusters(10, 2, 4);
 
     MinimumDistanceClassifier clf_cpu(false);
     MinimumDistanceClassifier clf_gpu(true);
@@ -439,23 +430,22 @@ TEST(CUDA_Correctness, SameResultsAsCPU_SmallDataset) {
         GTEST_SKIP() << "CUDA not available";
     }
 
-    clf_cpu.fit(X, y);
-    clf_gpu.fit(X, y);
+    clf_cpu.fit(dataset.X, dataset.y);
+    clf_gpu.fit(dataset.X, dataset.y);
 
-    auto prediction_cpu = clf_cpu.predict(X);
-    auto prediction_gpu = clf_gpu.predict(X);
+    auto prediction_cpu = clf_cpu.predict(dataset.X);
+    auto prediction_gpu = clf_gpu.predict(dataset.X);
 
     EXPECT_EQ(prediction_cpu, prediction_gpu);
 
-    float accuracy_cpu = calculate_accuracy(y, prediction_cpu);
-    float accuracy_gpu = calculate_accuracy(y, prediction_gpu);
+    float accuracy_cpu = calculate_accuracy(dataset.y, prediction_cpu);
+    float accuracy_gpu = calculate_accuracy(dataset.y, prediction_gpu);
 
     EXPECT_EQ(accuracy_cpu, accuracy_gpu);
 }
 
 TEST(CUDA_Correctness, SameResultsAsCPU_MediumDataset) {
-    auto X = generate_clusters(100, 5, 12);
-    auto y = generate_labels(100, 5);
+    auto dataset = generate_clusters(100, 5, 12);
 
     MinimumDistanceClassifier clf_cpu(false);
     MinimumDistanceClassifier clf_gpu(true);
@@ -464,23 +454,22 @@ TEST(CUDA_Correctness, SameResultsAsCPU_MediumDataset) {
         GTEST_SKIP() << "CUDA not available";
     }
 
-    clf_cpu.fit(X, y);
-    clf_gpu.fit(X, y);
+    clf_cpu.fit(dataset.X, dataset.y);
+    clf_gpu.fit(dataset.X, dataset.y);
 
-    auto prediction_cpu = clf_cpu.predict(X);
-    auto prediction_gpu = clf_gpu.predict(X);
+    auto prediction_cpu = clf_cpu.predict(dataset.X);
+    auto prediction_gpu = clf_gpu.predict(dataset.X);
 
     EXPECT_EQ(prediction_cpu, prediction_gpu);
 
-    float accuracy_cpu = calculate_accuracy(y, prediction_cpu);
-    float accuracy_gpu = calculate_accuracy(y, prediction_gpu);
+    float accuracy_cpu = calculate_accuracy(dataset.y, prediction_cpu);
+    float accuracy_gpu = calculate_accuracy(dataset.y, prediction_gpu);
 
     EXPECT_EQ(accuracy_cpu, accuracy_gpu);
 }
 
 TEST(CUDA_Correctness, SameResultsAsCPU_LargeDataset) {
-    auto X = generate_clusters(10000, 20, 40);
-    auto y = generate_labels(10000, 20);
+    auto dataset = generate_clusters(10000, 20, 40);
 
     MinimumDistanceClassifier clf_cpu(false);
     MinimumDistanceClassifier clf_gpu(true);
@@ -489,16 +478,16 @@ TEST(CUDA_Correctness, SameResultsAsCPU_LargeDataset) {
         GTEST_SKIP() << "CUDA not available";
     }
 
-    clf_cpu.fit(X, y);
-    clf_gpu.fit(X, y);
+    clf_cpu.fit(dataset.X, dataset.y);
+    clf_gpu.fit(dataset.X, dataset.y);
 
-    auto prediction_cpu = clf_cpu.predict(X);
-    auto prediction_gpu = clf_gpu.predict(X);
+    auto prediction_cpu = clf_cpu.predict(dataset.X);
+    auto prediction_gpu = clf_gpu.predict(dataset.X);
 
     EXPECT_EQ(prediction_cpu, prediction_gpu);
 
-    float accuracy_cpu = calculate_accuracy(y, prediction_cpu);
-    float accuracy_gpu = calculate_accuracy(y, prediction_gpu);
+    float accuracy_cpu = calculate_accuracy(dataset.y, prediction_cpu);
+    float accuracy_gpu = calculate_accuracy(dataset.y, prediction_gpu);
 
     EXPECT_EQ(accuracy_cpu, accuracy_gpu);
 }
@@ -506,8 +495,7 @@ TEST(CUDA_Correctness, SameResultsAsCPU_LargeDataset) {
 // CUDA presition
 
 TEST(CUDA_Precision, NoSignificantFloatingPointErrors) {
-    auto X = generate_clusters(100, 5, 50, 10.0f);
-    auto y = generate_labels(100, 5);
+    auto dataset = generate_clusters(100, 5, 50, 10.0f);
 
     MinimumDistanceClassifier clf_cpu(false);
     MinimumDistanceClassifier clf_gpu(true);
@@ -516,11 +504,11 @@ TEST(CUDA_Precision, NoSignificantFloatingPointErrors) {
         GTEST_SKIP() << "CUDA not available";
     }
 
-    clf_cpu.fit(X, y);
-    clf_gpu.fit(X, y);
+    clf_cpu.fit(dataset.X, dataset.y);
+    clf_gpu.fit(dataset.X, dataset.y);
 
-    auto prediction_cpu = clf_cpu.predict(X);
-    auto prediction_gpu = clf_gpu.predict(X);
+    auto prediction_cpu = clf_cpu.predict(dataset.X);
+    auto prediction_gpu = clf_gpu.predict(dataset.X);
 
     // Calculate max difference in predictions
     int differences = 0;
@@ -536,8 +524,7 @@ TEST(CUDA_Precision, NoSignificantFloatingPointErrors) {
 }
 
 TEST(CUDA_Precision, CentroidsWithinTolerance) {
-    auto X = generate_clusters(200, 10, 30, 5.0f);
-    auto y = generate_labels(200, 10);
+    auto dataset = generate_clusters(200, 10, 30, 5.0f);
 
     MinimumDistanceClassifier clf_cpu(false);
     MinimumDistanceClassifier clf_gpu(true);
@@ -546,8 +533,8 @@ TEST(CUDA_Precision, CentroidsWithinTolerance) {
         GTEST_SKIP() << "CUDA not available";
     }
 
-    clf_cpu.fit(X, y);
-    clf_gpu.fit(X, y);
+    clf_cpu.fit(dataset.X, dataset.y);
+    clf_gpu.fit(dataset.X, dataset.y);
 
     auto centroids_cpu = clf_cpu.get_centroids();
     auto centroids_gpu = clf_gpu.get_centroids();
@@ -566,8 +553,7 @@ TEST(CUDA_Precision, CentroidsWithinTolerance) {
 }
 
 TEST(CUDA_Precision, PredictionsExactMatch) {
-    auto X = generate_clusters(150, 8, 20, 8.0f);
-    auto y = generate_labels(150, 8);
+    auto dataset = generate_clusters(150, 8, 20, 8.0f);
 
     MinimumDistanceClassifier clf_cpu(false);
     MinimumDistanceClassifier clf_gpu(true);
@@ -576,11 +562,11 @@ TEST(CUDA_Precision, PredictionsExactMatch) {
         GTEST_SKIP() << "CUDA not available";
     }
 
-    clf_cpu.fit(X, y);
-    clf_gpu.fit(X, y);
+    clf_cpu.fit(dataset.X, dataset.y);
+    clf_gpu.fit(dataset.X, dataset.y);
 
-    auto prediction_cpu = clf_cpu.predict(X);
-    auto prediction_gpu = clf_gpu.predict(X);
+    auto prediction_cpu = clf_cpu.predict(dataset.X);
+    auto prediction_gpu = clf_gpu.predict(dataset.X);
 
     ASSERT_EQ(prediction_cpu.size(), prediction_gpu.size());
 
@@ -597,9 +583,8 @@ TEST(CUDA_Precision, PredictionsExactMatch) {
 }
 
 TEST(CUDA_Determinism, RepeatedRunsSameResults){
-    auto X = generate_clusters(1000, 5, 24, 4.0f);
-    auto X_test = generate_clusters(20, 5, 24, 2.0f);
-    auto y = generate_labels(1000, 5);
+    auto dataset = generate_clusters(1000, 5, 24, 4.0f);
+    auto dataset_test = generate_clusters(1000, 5, 24, 4.0f, 999);
 
     MinimumDistanceClassifier clf1(true);
     MinimumDistanceClassifier clf2(true);
@@ -615,13 +600,13 @@ TEST(CUDA_Determinism, RepeatedRunsSameResults){
         GTEST_SKIP() << "CUDA not available";
     }
 
-    EXPECT_NO_THROW(clf1.fit(X,y));
-    EXPECT_NO_THROW(clf2.fit(X,y));
-    EXPECT_NO_THROW(clf3.fit(X,y));
+    EXPECT_NO_THROW(clf1.fit(dataset.X,dataset.y));
+    EXPECT_NO_THROW(clf2.fit(dataset.X,dataset.y));
+    EXPECT_NO_THROW(clf3.fit(dataset.X,dataset.y));
 
-    auto pred1 = clf1.predict(X_test);
-    auto pred2 = clf2.predict(X_test);
-    auto pred3 = clf3.predict(X_test);
+    auto pred1 = clf1.predict(dataset_test.X);
+    auto pred2 = clf2.predict(dataset_test.X);
+    auto pred3 = clf3.predict(dataset_test.X);
 
     ASSERT_EQ(pred1.size(), pred2.size());
     ASSERT_EQ(pred2.size(), pred3.size());
@@ -673,8 +658,7 @@ TEST(CUDA_EdgeCases, VerySmallDataset_1Sample){
 }
 
 TEST(CUDA_EdgeCases, VerySmallDataset_10Samples){
-    auto X = generate_clusters(5, 2, 6, 5.0f);
-    auto y = generate_labels(5,2);
+    auto dataset = generate_clusters(5, 2, 6, 5.0f);
 
     MinimumDistanceClassifier clf_cpu(false);
     MinimumDistanceClassifier clf_gpu(true);
@@ -683,14 +667,13 @@ TEST(CUDA_EdgeCases, VerySmallDataset_10Samples){
         GTEST_SKIP() << "CUDA not available";
     }
 
-    clf_cpu.fit(X, y);
-    clf_gpu.fit(X, y);
+    clf_cpu.fit(dataset.X, dataset.y);
+    clf_gpu.fit(dataset.X, dataset.y);
 
-    auto X_test = generate_clusters(10, 2, 6, 3.0f, 9999);
-    auto y_test = generate_labels(10, 2);
+    auto dataset_test = generate_clusters(10, 2, 6, 3.0f, 9999);
 
-    auto predictions_cpu = clf_cpu.predict(X_test);
-    auto predictions_gpu = clf_gpu.predict(X_test);
+    auto predictions_cpu = clf_cpu.predict(dataset_test.X);
+    auto predictions_gpu = clf_gpu.predict(dataset_test.X);
 
     EXPECT_EQ(predictions_cpu, predictions_gpu);
 
@@ -701,16 +684,15 @@ TEST(CUDA_EdgeCases, VerySmallDataset_10Samples){
     EXPECT_GT(count_class_1, 0); // predict some as 1
     EXPECT_EQ(count_class_0 + count_class_1, 20);
 
-    float cpu_accuracy = calculate_accuracy(y_test, predictions_cpu);
-    float gpu_accuracy = calculate_accuracy(y_test, predictions_gpu);
+    float cpu_accuracy = calculate_accuracy(dataset_test.y, predictions_cpu);
+    float gpu_accuracy = calculate_accuracy(dataset_test.y, predictions_gpu);
     
     EXPECT_GT(gpu_accuracy, 0.5f);
     EXPECT_EQ(cpu_accuracy, gpu_accuracy);
 }
 
 TEST(CUDA_EdgeCases, BlockSizedDataset_256Samples){
-    auto X = generate_clusters(128, 2, 8, 8.0f, 200);
-    auto y = generate_labels(128,2);
+    auto dataset = generate_clusters(128, 2, 8, 8.0f, 200);
 
     MinimumDistanceClassifier clf_cpu(false);
     MinimumDistanceClassifier clf_gpu(true);
@@ -719,14 +701,13 @@ TEST(CUDA_EdgeCases, BlockSizedDataset_256Samples){
         GTEST_SKIP() << "CUDA not available";
     }
 
-    clf_cpu.fit(X, y);
-    clf_gpu.fit(X, y);
+    clf_cpu.fit(dataset.X, dataset.y);
+    clf_gpu.fit(dataset.X, dataset.y);
 
-    auto X_test = generate_clusters(200, 2, 8, 8.0f, 222);
-    auto y_test = generate_labels(200, 2);
+    auto dataset_test = generate_clusters(200, 2, 8, 8.0f, 222);
 
-    auto predictions_cpu = clf_cpu.predict(X_test);
-    auto predictions_gpu = clf_gpu.predict(X_test);
+    auto predictions_cpu = clf_cpu.predict(dataset_test.X);
+    auto predictions_gpu = clf_gpu.predict(dataset_test.X);
 
     EXPECT_EQ(predictions_cpu, predictions_gpu);
 
@@ -742,8 +723,8 @@ TEST(CUDA_EdgeCases, BlockSizedDataset_256Samples){
     EXPECT_GT(ratio, 0.3f);
     EXPECT_LT(ratio, 0.7f);
 
-    float cpu_accuracy = calculate_accuracy(y_test, predictions_cpu);
-    float gpu_accuracy = calculate_accuracy(y_test, predictions_gpu);
+    float cpu_accuracy = calculate_accuracy(dataset_test.y, predictions_cpu);
+    float gpu_accuracy = calculate_accuracy(dataset_test.y, predictions_gpu);
     
     EXPECT_GT(gpu_accuracy, 0.85f);
     EXPECT_EQ(cpu_accuracy, gpu_accuracy);
@@ -751,8 +732,7 @@ TEST(CUDA_EdgeCases, BlockSizedDataset_256Samples){
 
 
 TEST(CUDA_EdgeCases, JustOverBlockSize_258Samples){
-    auto X = generate_clusters(129, 2, 8, 8.0f, 300);
-    auto y = generate_labels(129,2);
+    auto dataset = generate_clusters(129, 2, 8, 8.0f, 300);
 
     MinimumDistanceClassifier clf_cpu(false);
     MinimumDistanceClassifier clf_gpu(true);
@@ -761,14 +741,13 @@ TEST(CUDA_EdgeCases, JustOverBlockSize_258Samples){
         GTEST_SKIP() << "CUDA not available";
     }
 
-    clf_cpu.fit(X, y);
-    clf_gpu.fit(X, y);
+    clf_cpu.fit(dataset.X, dataset.y);
+    clf_gpu.fit(dataset.X, dataset.y);
 
-    auto X_test = generate_clusters(200, 2, 8, 8.0f, 333);
-    auto y_test = generate_labels(200, 2);
+    auto dataset_test = generate_clusters(200, 2, 8, 8.0f, 333);
 
-    auto predictions_cpu = clf_cpu.predict(X_test);
-    auto predictions_gpu = clf_gpu.predict(X_test);
+    auto predictions_cpu = clf_cpu.predict(dataset_test.X);
+    auto predictions_gpu = clf_gpu.predict(dataset_test.X);
 
     EXPECT_EQ(predictions_cpu, predictions_gpu);
 
@@ -784,16 +763,15 @@ TEST(CUDA_EdgeCases, JustOverBlockSize_258Samples){
     EXPECT_GT(ratio, 0.3f);
     EXPECT_LT(ratio, 0.7f);
 
-    float cpu_accuracy = calculate_accuracy(y_test, predictions_cpu);
-    float gpu_accuracy = calculate_accuracy(y_test, predictions_gpu);
+    float cpu_accuracy = calculate_accuracy(dataset_test.y, predictions_cpu);
+    float gpu_accuracy = calculate_accuracy(dataset_test.y, predictions_gpu);
     
     EXPECT_GT(gpu_accuracy, 0.85f);
     EXPECT_EQ(cpu_accuracy, gpu_accuracy);
 }
 
 TEST(CUDA_EdgeCases, ExactlyGridSize_65536Samples){
-    auto X = generate_clusters(16384, 4, 16, 15.0f, 400);
-    auto y = generate_labels(16384, 4);
+    auto dataset = generate_clusters(16384, 4, 16, 15.0f, 400);
 
     MinimumDistanceClassifier clf_cpu(false);
     MinimumDistanceClassifier clf_gpu(true);
@@ -802,14 +780,13 @@ TEST(CUDA_EdgeCases, ExactlyGridSize_65536Samples){
         GTEST_SKIP() << "CUDA not available";
     }
 
-    EXPECT_NO_THROW(clf_cpu.fit(X, y));
-    EXPECT_NO_THROW(clf_gpu.fit(X, y));
+    EXPECT_NO_THROW(clf_cpu.fit(dataset.X, dataset.y));
+    EXPECT_NO_THROW(clf_gpu.fit(dataset.X, dataset.y));
 
-    auto X_test = generate_clusters(500, 4, 16, 15.0f, 444);
-    auto y_test = generate_labels(500, 4);
+    auto dataset_test = generate_clusters(500, 4, 16, 15.0f, 444);
 
-    auto predictions_cpu = clf_cpu.predict(X_test);
-    auto predictions_gpu = clf_gpu.predict(X_test);
+    auto predictions_cpu = clf_cpu.predict(dataset_test.X);
+    auto predictions_gpu = clf_gpu.predict(dataset_test.X);
     
     EXPECT_EQ(predictions_cpu, predictions_gpu);
 
@@ -821,8 +798,8 @@ TEST(CUDA_EdgeCases, ExactlyGridSize_65536Samples){
     int total = std::accumulate(class_counts.begin(), class_counts.end(), 0);
     EXPECT_EQ(total, 2000);
 
-    float cpu_accuracy = calculate_accuracy(predictions_cpu, y_test);
-    float gpu_accuracy = calculate_accuracy(predictions_gpu, y_test);
+    float cpu_accuracy = calculate_accuracy(dataset_test.y, predictions_cpu);
+    float gpu_accuracy = calculate_accuracy(dataset_test.y, predictions_gpu);
 
     EXPECT_GT(cpu_accuracy, 0.75f);
     EXPECT_GT(gpu_accuracy, 0.75f);
@@ -830,8 +807,7 @@ TEST(CUDA_EdgeCases, ExactlyGridSize_65536Samples){
 }
 
 TEST(CUDA_EdgeCases, VeryLargeDataset_1MSamples){
-    auto X = generate_clusters(50000, 20, 50, 20.0f, 500);
-    auto y = generate_labels(50000, 20);
+    auto dataset = generate_clusters(50000, 20, 50, 20.0f, 500);
 
     MinimumDistanceClassifier clf_cpu(false);
     MinimumDistanceClassifier clf_gpu(true);
@@ -840,12 +816,11 @@ TEST(CUDA_EdgeCases, VeryLargeDataset_1MSamples){
         GTEST_SKIP() << "CUDA not available";
     }
 
-    EXPECT_NO_THROW(clf_gpu.fit(X, y));
+    EXPECT_NO_THROW(clf_gpu.fit(dataset.X, dataset.y));
 
-    auto X_test = generate_clusters(1000, 20, 50, 20.0f, 555);
-    auto y_test = generate_labels(1000, 20);
+    auto dataset_test = generate_clusters(1000, 20, 50, 20.0f, 555);
 
-    auto predictions_gpu = clf_gpu.predict(X_test);
+    auto predictions_gpu = clf_gpu.predict(dataset_test.X);
 
     std::set<int> unique_predictions(predictions_gpu.begin(), predictions_gpu.end());
     EXPECT_GE(unique_predictions.size(), 16); // should preict most classes
@@ -869,7 +844,7 @@ TEST(CUDA_EdgeCases, VeryLargeDataset_1MSamples){
 
     EXPECT_GE(classes_with_predictions,16); // should predict most classes
     
-    float gpu_accuracy = calculate_accuracy(y_test, predictions_gpu);
+    float gpu_accuracy = calculate_accuracy(dataset_test.y, predictions_gpu);
     EXPECT_GT(gpu_accuracy, 0.65f);
 
     std::cout << "1M samples - GPU Accuracy: " << (gpu_accuracy * 100) << "%" << std::endl;
