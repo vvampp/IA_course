@@ -25,9 +25,13 @@ Dataset generate_realistic_dataset(int n_samples_per_class,
     std::mt19937 rng(seed);
     std::uniform_real_distribution<float> uniform_dist(0.0f, 1.0f);
     std::normal_distribution<float> normal_dist(0.0f, 1.0f);
-    
+
     Dataset dataset;
-    int total_samples = n_samples_per_class * n_classes;
+
+    int total_regular_samples = n_samples_per_class * n_classes;
+    int n_outliers = static_cast<int>(total_regular_samples * outlier_rate);
+    int total_samples = total_regular_samples + n_outliers;
+
     dataset.X.reserve(total_samples);
     dataset.y.reserve(total_samples);
     
@@ -72,13 +76,16 @@ Dataset generate_realistic_dataset(int n_samples_per_class,
     }
     
     // Normalize total samples
-    int total_cluster_samples = std::accumulate(cluster_sizes.begin(), cluster_sizes.end(), 0);
+    int sum_cluster_sizes = std::accumulate(cluster_sizes.begin(), cluster_sizes.end(), 0);
     for (int c = 0; c < n_classes; ++c) {
         cluster_sizes[c] = static_cast<int>(
-            (static_cast<float>(cluster_sizes[c]) / total_cluster_samples) * 
-            n_samples_per_class * n_classes * (1.0f - outlier_rate)
+            (static_cast<float>(cluster_sizes[c]) / sum_cluster_sizes) * total_regular_samples
         );
     }
+
+    int actual_total = std::accumulate(cluster_sizes.begin(), cluster_sizes.end(), 0);
+    int difference = total_regular_samples - actual_total;
+    cluster_sizes[n_classes - 1] += difference;
     
     // Generate samples for each cluster
     for (int c = 0; c < n_classes; ++c) {
@@ -112,9 +119,10 @@ Dataset generate_realistic_dataset(int n_samples_per_class,
             dataset.y.push_back(c);
         }
     }
+
+    assert(dataset.X.size() == static_cast<size_t>(total_regular_samples));
     
     // Add outliers 
-    int n_outliers = static_cast<int>(total_samples * outlier_rate);
     std::uniform_int_distribution<int> class_dist(0, n_classes - 1);
     
     for (int i = 0; i < n_outliers; ++i) {
@@ -128,6 +136,8 @@ Dataset generate_realistic_dataset(int n_samples_per_class,
         dataset.X.push_back(outlier);
         dataset.y.push_back(class_dist(rng));  // Random class label
     }
+
+    assert(dataset.X.size() == static_cast<size_t>(total_samples));
     
     // Shuffle to mix everything
     std::vector<size_t> indices(dataset.X.size());
@@ -412,7 +422,7 @@ TEST(ClassifierAccuracyTests, OverlappingClusters) {
 
 TEST(ClassifierAccuracyTests, HeavyWorkload) {
     // Medium difficulty: many classes
-    auto dataset = generate_medium_realistic_dataset(200, 50, 120, 400);
+    auto dataset = generate_medium_realistic_dataset(20000, 50, 120, 400);
     
     MinimumDistanceClassifier clf(false);
     clf.fit(dataset.X, dataset.y);
@@ -467,16 +477,6 @@ TEST(ClassifierEdgeCases, HighDimensional) {
     EXPECT_NO_THROW(clf.fit(dataset.X, dataset.y));
 
     EXPECT_EQ(clf.get_n_features(), 500);
-}
-
-TEST(ClassifierEdgeCases, LargeDataset) {
-    auto dataset = generate_easy_realistic_dataset(1000, 3, 20, 700);
-    
-    MinimumDistanceClassifier clf(false);
-    EXPECT_NO_THROW(clf.fit(dataset.X, dataset.y));
-
-    auto predictions = clf.predict(dataset.X);
-    EXPECT_EQ(predictions.size(), 3000);
 }
 
 TEST(ClassifierEdgeCases, EmptyPredictionSet) {
