@@ -31,7 +31,18 @@ std::vector<std::vector<float>> generate_clusters(int n_samples_per_class, int n
             X.push_back(sample);
         }
     }
-    return X;
+
+    // shuffle X_shuffled
+    std::vector<size_t> indices(X.size());
+    std::iota(indices.begin(), indices.end(), 0);
+    std::shuffle(indices.begin(), indices.end(), rng);
+
+    std::vector<std::vector<float>>X_shuffled;
+    for(const auto& idx : indices){
+        X_shuffled.push_back(X[idx]);
+    }
+
+    return X_shuffled;
 }
 
 std::vector<int> generate_labels(int n_samples_per_class, int n_classes) {
@@ -594,6 +605,16 @@ TEST(CUDA_Determinism, RepeatedRunsSameResults){
     MinimumDistanceClassifier clf2(true);
     MinimumDistanceClassifier clf3(true);
 
+    if(!clf1.is_using_cuda()){
+        GTEST_SKIP() << "CUDA not available";
+    }
+    if(!clf2.is_using_cuda()){
+        GTEST_SKIP() << "CUDA not available";
+    }
+    if(!clf3.is_using_cuda()){
+        GTEST_SKIP() << "CUDA not available";
+    }
+
     EXPECT_NO_THROW(clf1.fit(X,y));
     EXPECT_NO_THROW(clf2.fit(X,y));
     EXPECT_NO_THROW(clf3.fit(X,y));
@@ -610,6 +631,251 @@ TEST(CUDA_Determinism, RepeatedRunsSameResults){
         EXPECT_EQ(pred2[i], pred3[i]);
     }
 }
+
+// CUDA edge cases
+
+TEST(CUDA_EdgeCases, VerySmallDataset_1Sample){
+    std::vector<std::vector<float>> X = {{1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f}};
+    std::vector<int> y = {0};
+
+    MinimumDistanceClassifier clf_cpu(false);
+    MinimumDistanceClassifier clf_gpu(true);
+
+    if(!clf_gpu.is_using_cuda()){
+        GTEST_SKIP() << "CUDA not available";
+    }
+
+    clf_cpu.fit(X, y);
+    clf_gpu.fit(X, y);
+
+    std::vector<std::vector<float>> X_test = {
+        { 1.1f, 2.1f, 3.1f, 4.1f, 5.1f, 6.1f},  // close to class
+        { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f},  // exact
+        {10.0f, 20.0, 30.0f, 40.0f, 50.0f, 60.0f}   // away from class
+    };
+
+    auto predict_cpu = clf_cpu.predict(X_test);
+    auto predict_gpu = clf_gpu.predict(X_test);
+
+    EXPECT_EQ(predict_cpu, predict_cpu);
+
+    for(const auto&p : predict_gpu) {
+        EXPECT_EQ(p, 0);
+    }
+
+    std::map<int, int> class_distribution;
+    for(const auto& p : predict_gpu){
+        class_distribution[p]++;
+    }
+
+    EXPECT_EQ(class_distribution.size(), 1);
+    EXPECT_EQ(class_distribution[0], 3);
+}
+
+TEST(CUDA_EdgeCases, VerySmallDataset_10Samples){
+    auto X = generate_clusters(5, 2, 6, 5.0f);
+    auto y = generate_labels(5,2);
+
+    MinimumDistanceClassifier clf_cpu(false);
+    MinimumDistanceClassifier clf_gpu(true);
+
+    if(!clf_gpu.is_using_cuda()){
+        GTEST_SKIP() << "CUDA not available";
+    }
+
+    clf_cpu.fit(X, y);
+    clf_gpu.fit(X, y);
+
+    auto X_test = generate_clusters(10, 2, 6, 3.0f, 9999);
+    auto y_test = generate_labels(10, 2);
+
+    auto predictions_cpu = clf_cpu.predict(X_test);
+    auto predictions_gpu = clf_gpu.predict(X_test);
+
+    EXPECT_EQ(predictions_cpu, predictions_gpu);
+
+    int count_class_0 = std::count(predictions_gpu.begin(), predictions_gpu.end(), 0);
+    int count_class_1 = std::count(predictions_gpu.begin(), predictions_gpu.end(), 1);
+
+    EXPECT_GT(count_class_0, 0); // predict some as 0 
+    EXPECT_GT(count_class_1, 0); // predict some as 1
+    EXPECT_EQ(count_class_0 + count_class_1, 20);
+
+    float cpu_accuracy = calculate_accuracy(y_test, predictions_cpu);
+    float gpu_accuracy = calculate_accuracy(y_test, predictions_gpu);
+    
+    EXPECT_GT(gpu_accuracy, 0.5f);
+    EXPECT_EQ(cpu_accuracy, gpu_accuracy);
+}
+
+TEST(CUDA_EdgeCases, BlockSizedDataset_256Samples){
+    auto X = generate_clusters(128, 2, 8, 8.0f, 200);
+    auto y = generate_labels(128,2);
+
+    MinimumDistanceClassifier clf_cpu(false);
+    MinimumDistanceClassifier clf_gpu(true);
+
+    if(!clf_gpu.is_using_cuda()){
+        GTEST_SKIP() << "CUDA not available";
+    }
+
+    clf_cpu.fit(X, y);
+    clf_gpu.fit(X, y);
+
+    auto X_test = generate_clusters(200, 2, 8, 8.0f, 222);
+    auto y_test = generate_labels(200, 2);
+
+    auto predictions_cpu = clf_cpu.predict(X_test);
+    auto predictions_gpu = clf_gpu.predict(X_test);
+
+    EXPECT_EQ(predictions_cpu, predictions_gpu);
+
+    int count_class_0 = std::count(predictions_gpu.begin(), predictions_gpu.end(), 0);
+    int count_class_1 = std::count(predictions_gpu.begin(), predictions_gpu.end(), 1);
+
+    EXPECT_GT(count_class_0, 50); // predict significant as 0 
+    EXPECT_GT(count_class_1, 50); // predict significant as 1
+    EXPECT_EQ(count_class_0 + count_class_1, 400);
+
+    float ratio = static_cast<float>(count_class_0) / (count_class_0 + count_class_1);
+
+    EXPECT_GT(ratio, 0.3f);
+    EXPECT_LT(ratio, 0.7f);
+
+    float cpu_accuracy = calculate_accuracy(y_test, predictions_cpu);
+    float gpu_accuracy = calculate_accuracy(y_test, predictions_gpu);
+    
+    EXPECT_GT(gpu_accuracy, 0.85f);
+    EXPECT_EQ(cpu_accuracy, gpu_accuracy);
+}
+
+
+TEST(CUDA_EdgeCases, JustOverBlockSize_258Samples){
+    auto X = generate_clusters(129, 2, 8, 8.0f, 300);
+    auto y = generate_labels(129,2);
+
+    MinimumDistanceClassifier clf_cpu(false);
+    MinimumDistanceClassifier clf_gpu(true);
+
+    if(!clf_gpu.is_using_cuda()){
+        GTEST_SKIP() << "CUDA not available";
+    }
+
+    clf_cpu.fit(X, y);
+    clf_gpu.fit(X, y);
+
+    auto X_test = generate_clusters(200, 2, 8, 8.0f, 333);
+    auto y_test = generate_labels(200, 2);
+
+    auto predictions_cpu = clf_cpu.predict(X_test);
+    auto predictions_gpu = clf_gpu.predict(X_test);
+
+    EXPECT_EQ(predictions_cpu, predictions_gpu);
+
+    int count_class_0 = std::count(predictions_gpu.begin(), predictions_gpu.end(), 0);
+    int count_class_1 = std::count(predictions_gpu.begin(), predictions_gpu.end(), 1);
+
+    EXPECT_GT(count_class_0, 50); // predict significant as 0 
+    EXPECT_GT(count_class_1, 50); // predict significant as 1
+    EXPECT_EQ(count_class_0 + count_class_1, 400);
+
+    float ratio = static_cast<float>(count_class_0) / (count_class_0 + count_class_1);
+
+    EXPECT_GT(ratio, 0.3f);
+    EXPECT_LT(ratio, 0.7f);
+
+    float cpu_accuracy = calculate_accuracy(y_test, predictions_cpu);
+    float gpu_accuracy = calculate_accuracy(y_test, predictions_gpu);
+    
+    EXPECT_GT(gpu_accuracy, 0.85f);
+    EXPECT_EQ(cpu_accuracy, gpu_accuracy);
+}
+
+TEST(CUDA_EdgeCases, ExactlyGridSize_65536Samples){
+    auto X = generate_clusters(16384, 4, 16, 15.0f, 400);
+    auto y = generate_labels(16384, 4);
+
+    MinimumDistanceClassifier clf_cpu(false);
+    MinimumDistanceClassifier clf_gpu(true);
+
+    if(!clf_gpu.is_using_cuda()){
+        GTEST_SKIP() << "CUDA not available";
+    }
+
+    EXPECT_NO_THROW(clf_cpu.fit(X, y));
+    EXPECT_NO_THROW(clf_gpu.fit(X, y));
+
+    auto X_test = generate_clusters(500, 4, 16, 15.0f, 444);
+    auto y_test = generate_labels(500, 4);
+
+    auto predictions_cpu = clf_cpu.predict(X_test);
+    auto predictions_gpu = clf_gpu.predict(X_test);
+    
+    EXPECT_EQ(predictions_cpu, predictions_gpu);
+
+    std::vector<int> class_counts(4,0);
+    for(auto const&p : predictions_gpu){
+        class_counts[p]++;
+    }
+
+    int total = std::accumulate(class_counts.begin(), class_counts.end(), 0);
+    EXPECT_EQ(total, 2000);
+
+    float cpu_accuracy = calculate_accuracy(predictions_cpu, y_test);
+    float gpu_accuracy = calculate_accuracy(predictions_gpu, y_test);
+
+    EXPECT_GT(cpu_accuracy, 0.75f);
+    EXPECT_GT(gpu_accuracy, 0.75f);
+    EXPECT_NEAR(cpu_accuracy, gpu_accuracy, 0.01f);
+}
+
+TEST(CUDA_EdgeCases, VeryLargeDataset_1MSamples){
+    auto X = generate_clusters(50000, 20, 50, 20.0f, 500);
+    auto y = generate_labels(50000, 20);
+
+    MinimumDistanceClassifier clf_cpu(false);
+    MinimumDistanceClassifier clf_gpu(true);
+
+    if(!clf_gpu.is_using_cuda()){
+        GTEST_SKIP() << "CUDA not available";
+    }
+
+    EXPECT_NO_THROW(clf_gpu.fit(X, y));
+
+    auto X_test = generate_clusters(1000, 20, 50, 20.0f, 555);
+    auto y_test = generate_labels(1000, 20);
+
+    auto predictions_gpu = clf_gpu.predict(X_test);
+
+    std::set<int> unique_predictions(predictions_gpu.begin(), predictions_gpu.end());
+    EXPECT_GE(unique_predictions.size(), 16); // should preict most classes
+    
+    std::vector<int> class_counts(20,0);
+    for(const auto& p : predictions_gpu){
+        EXPECT_GE(p, 0);    // non negative prediction
+        EXPECT_LT(p, 20);   // prediction within class range
+        class_counts[p]++;  
+    }
+    
+    int total = std::accumulate(class_counts.begin(), class_counts.end(), 0);
+    EXPECT_EQ(total, 20000);
+
+    int classes_with_predictions = 0;
+    for(int c = 0; c < 20 ; ++c){
+        if (class_counts[c] > 0) {
+            classes_with_predictions++;
+        }
+    }
+
+    EXPECT_GE(classes_with_predictions,16); // should predict most classes
+    
+    float gpu_accuracy = calculate_accuracy(y_test, predictions_gpu);
+    EXPECT_GT(gpu_accuracy, 0.65f);
+
+    std::cout << "1M samples - GPU Accuracy: " << (gpu_accuracy * 100) << "%" << std::endl;
+}
+
+
 
 // main
 
