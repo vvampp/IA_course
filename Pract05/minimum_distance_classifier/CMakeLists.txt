@@ -1,5 +1,9 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.18...3.27)
 project(MinimumDistanceClassifier LANGUAGES CXX)
+
+if(POLICY CMP0148)
+    cmake_policy(SET CMP0148 NEW)
+endif()
 
 # Options
 option(USE_CUDA "Build with CUDA support" ON)
@@ -12,8 +16,10 @@ if(USE_CUDA)
         enable_language(CUDA)
         set(CMAKE_CUDA_STANDARD 17)
         set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+        
         if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-            set(CMAKE_CUDA_ARCHITECTURES "native")  # Auto-detecta tu GPU
+            set(CMAKE_CUDA_ARCHITECTURES "52;60;70;75;86")
+            message(STATUS "Using default CUDA architectures: ${CMAKE_CUDA_ARCHITECTURES}")
         endif()
     else()
         message(WARNING "CUDA requested but not found. Building CPU-only version.")
@@ -21,7 +27,8 @@ if(USE_CUDA)
     endif()
 endif()
 
-# Find pybind11
+# Configurar pybind11 para usar FindPython moderno
+set(PYBIND11_FINDPYTHON ON)
 find_package(pybind11 REQUIRED)
 
 # C++ standard
